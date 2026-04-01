@@ -2,28 +2,25 @@ package de.codevoid.ahubby;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.google.android.material.navigationrail.NavigationRailView;
 
-import de.codevoid.ahubby.api.ApiClient;
 import de.codevoid.ahubby.auth.AuthStore;
+import de.codevoid.ahubby.fragment.GpxFragment;
+import de.codevoid.ahubby.fragment.LiveFragment;
+import de.codevoid.ahubby.fragment.LocationsFragment;
+import de.codevoid.ahubby.fragment.ProfileFragment;
 
 public class MainActivity extends AppCompatActivity {
-
-    private TextView apiOutput;
-    private final ApiClient apiClient = new ApiClient();
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        AuthStore auth = new AuthStore(this);
-        if (!auth.isLoggedIn()) {
+        if (!new AuthStore(this).isLoggedIn()) {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
@@ -31,43 +28,27 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
-        String token = auth.getToken();
+        NavigationRailView navRail = findViewById(R.id.nav_rail);
 
-        ((TextView) findViewById(R.id.token_text)).setText(token);
-        apiOutput = findViewById(R.id.api_output);
+        if (savedInstanceState == null) {
+            showFragment(new GpxFragment());
+            navRail.setSelectedItemId(R.id.nav_gpx);
+        }
 
-        findViewById(R.id.fetch_gpx_button).setOnClickListener(v -> fetch(
-                () -> apiClient.fetchGpxList(token)));
-
-        findViewById(R.id.fetch_locations_button).setOnClickListener(v -> fetch(
-                () -> apiClient.fetchLocationsList(token)));
-
-        findViewById(R.id.logout_button).setOnClickListener(v -> {
-            auth.clear();
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
+        navRail.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_gpx) showFragment(new GpxFragment());
+            else if (id == R.id.nav_locations) showFragment(new LocationsFragment());
+            else if (id == R.id.nav_live) showFragment(new LiveFragment());
+            else if (id == R.id.nav_profile) showFragment(new ProfileFragment());
+            return true;
         });
     }
 
-    private void fetch(ApiCall call) {
-        apiOutput.setText("…");
-        executor.execute(() -> {
-            try {
-                String result = call.execute();
-                runOnUiThread(() -> apiOutput.setText(result));
-            } catch (Exception e) {
-                runOnUiThread(() -> apiOutput.setText("Error: " + e.getMessage()));
-            }
-        });
-    }
-
-    interface ApiCall {
-        String execute() throws Exception;
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        executor.shutdown();
+    private void showFragment(Fragment fragment) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commit();
     }
 }

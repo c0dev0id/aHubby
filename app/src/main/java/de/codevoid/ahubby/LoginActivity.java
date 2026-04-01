@@ -56,7 +56,10 @@ public class LoginActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 ApiClient.LoginResult result = apiClient.login(email, password);
-                new AuthStore(this).save(result.userToken, result.userId);
+                AuthStore store = new AuthStore(this);
+                store.save(result.userToken, result.userId);
+                store.saveProfile(result.email, result.displayName, result.deviceName,
+                        result.mapLicense, result.communityPoints);
                 runOnUiThread(this::onLoginSuccess);
             } catch (Exception e) {
                 runOnUiThread(() -> {

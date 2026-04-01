@@ -2,9 +2,20 @@
 <resources>
     <color name="background">#1A1A1A</color>
     <color name="surface">#2A2A2A</color>
+    <color name="surface_variant">#333333</color>
     <color name="primary">#FF6B00</color>
     <color name="primary_dark">#CC5500</color>
     <color name="on_primary">#FFFFFF</color>
     <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#AAAAAA</color>
     <color name="error">#CF6679</color>
+    <color name="divider">#3A3A3A</color>
+
+    <!-- Category placeholder colors -->
+    <color name="cat_camping">#4CAF50</color>
+    <color name="cat_fuel">#FFC107</color>
+    <color name="cat_food">#FF5722</color>
+    <color name="cat_accommodation">#2196F3</color>
+    <color name="cat_viewpoint">#9C27B0</color>
+    <color name="cat_default">#607D8B</color>
 </resources>

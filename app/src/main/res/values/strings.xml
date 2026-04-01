@@ -7,8 +7,38 @@
     <string name="action_logout">Log out</string>
     <string name="error_fields_required">Email and password are required</string>
     <string name="error_login_failed">Login failed</string>
-    <string name="label_connected">Connected to DMD Hub</string>
-    <string name="label_token">Bearer token:</string>
-    <string name="action_fetch_gpx">Fetch GPX</string>
-    <string name="action_fetch_locations">Fetch Locations</string>
+
+    <!-- Navigation -->
+    <string name="nav_gpx">GPX Routes</string>
+    <string name="nav_locations">My Locations</string>
+    <string name="nav_live">Live</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- GPX -->
+    <string name="toggle_show_in_dmd2">Show in DMD2</string>
+    <string name="toggle_in_dmd2">✓ In DMD2</string>
+    <string name="filter_country">Filter by country</string>
+    <string name="filter_all">All countries</string>
+    <string name="label_public">Public</string>
+    <string name="gpx_empty">No GPX routes found</string>
+
+    <!-- Locations -->
+    <string name="locations_empty">No locations found</string>
+
+    <!-- Live -->
+    <string name="live_coming_soon">Live location sharing\ncoming soon</string>
+
+    <!-- Profile -->
+    <string name="label_email">Email</string>
+    <string name="label_display_name">Name</string>
+    <string name="label_device">Device</string>
+    <string name="label_map_license">Map License</string>
+    <string name="label_community_points">Community Points</string>
+    <string name="label_yes">Yes</string>
+    <string name="label_no">No</string>
+    <string name="label_none">—</string>
+
+    <!-- Errors -->
+    <string name="error_load_failed">Failed to load data</string>
+    <string name="error_toggle_failed">Update failed — change reverted</string>
 </resources>
