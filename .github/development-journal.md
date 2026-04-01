@@ -45,6 +45,15 @@ redirects to the login screen. Passwords are not persisted.
 - Login / session persistence via `AuthStore` (SharedPreferences)
 - Bearer token authentication against `app.advhub.net`
 
-### Phase 2 (planned)
-- GPX Manager: list, toggle "Loaded to DMD Map", upload
-- Locations: list, delete
+### Phase 2
+- NavigationRailView: persistent landscape nav (GPX Routes, My Locations, Live placeholder, Profile)
+- Fragment-per-section pattern: each Fragment owns its own executor and data load lifecycle
+- Optimistic toggle UX: state flipped immediately in the model and adapter; reverted + Snackbar on API failure
+- Country filter: `MaterialAlertDialogBuilder` single-choice list derived from loaded GPX data
+- Category color system: dot-shaped `View` with runtime `setColorFilter()` on a `circle.xml` shape drawable
+- Toggle label: "Show in DMD2" (inactive) / "✓ In DMD2" (active) — controls sync to DMD2 navigation device
+
+### Phase 3 (planned)
+- GPX upload via `hub.dmdnavigation.com` (hub session cookie required)
+- Location delete
+- Live location (requires reverse engineering of group_proxy position API)

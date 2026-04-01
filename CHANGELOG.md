@@ -10,3 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - App scaffold: single-module Gradle project, CI/CD build pipeline (lint, build, sign, nightly pre-release)
 - Authentication: login screen with email/password, Bearer token stored in SharedPreferences
 - Session persistence: app redirects to login screen if no valid token is present; logout clears stored credentials
+- Phase 2 UI: NavigationRailView with four sections — GPX Routes, My Locations, Live (placeholder), Profile
+- GPX Routes: sortable list with country filter, "Show in DMD2" / "✓ In DMD2" toggle (optimistic update)
+- My Locations: list with category-colored indicator dot, per-location DMD2 toggle
+- Profile: read-only display of account fields from login response (name, email, device, license, points)
+- User profile fields (displayName, email, deviceName, mapLicense, communityPoints) persisted at login
