@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">aHubby</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="action_login">Log in</string>
+    <string name="action_logout">Log out</string>
+    <string name="error_fields_required">Email and password are required</string>
+    <string name="error_login_failed">Login failed</string>
+    <string name="label_connected">Connected to DMD Hub</string>
+</resources>
