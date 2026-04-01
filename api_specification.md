@@ -1,88 +1,335 @@
 # DMD Navigation Hub — API Specification
 
-Base URL: `https://hub.dmdnavigation.com`
+Two separate backends. Bearer token auth is preferred for programmatic use; hub session is
+browser-obtained only (Cloudflare Turnstile blocks programmatic login).
+
+---
 
 ## Authentication
 
-All endpoints require a session cookie. There is no programmatic login — the login form is protected by a Cloudflare Turnstile CAPTCHA that is enforced server-side regardless of user-agent or request format. No JSON auth endpoint exists.
+### app.advhub.net — Bearer token
 
-**Obtaining a session:** Log in via the browser at `https://hub.dmdnavigation.com/account/login/`, then copy the `dmdub_session` cookie value from DevTools (Application → Cookies).
+```
+POST https://app.advhub.net/api/dmd_connector.php
+Content-Type: application/json
+
+{"email": "<email>", "password": "<password>"}
+```
+
+**⚠️ Each successful login issues a new `user_token` and invalidates the previous one.** Do not
+re-authenticate unnecessarily.
+
+Response fields (confirmed):
+
+| Field | Type | Notes |
+|---|---|---|
+| `user_token` | string | 64-char hex. Use as `Authorization: Bearer <user_token>` |
+| `token` | string | `rumo_` prefix. Device/group pairing token — NOT for API auth |
+| `_id` | string | MongoDB user ID |
+| `web_id` | string | WordPress user ID |
+| `displayname` | string | |
+| `email` | string | |
+| `web_url` | string | User profile URL on drivemodedashboard.com |
+| `avatar_url` | string | Full URL to avatar image |
+| `share_location` | bool | Whether user has location sharing enabled |
+| `location` | string | Encoded current location (format unknown) |
+| `speed` | string | Current speed as string |
+| `device` | string | Active device name e.g. `"DMD Navigation T865"` |
+| `active_device_id` | string | UUID |
+| `active_device_name` | string | |
+| `active_device_at` | string | ISO 8601 timestamp of last device activity |
+| `active_group_id` | string | Empty string when not in a group |
+| `last_group_file_added` | string | Unix timestamp or `-1` |
+| `active_group_file_time` | string | Unix timestamp or `-1` |
+| `map_license` | string | `"true"` or `"false"` |
+| `playstore` | string | `"true"` or `"false"` |
+| `show_mph` | bool | Unit preference |
+| `community_points` | int | |
+| `groups_imported` | bool | |
+| `profile_visibility` | string | e.g. `"Public"` |
+| `signature` | string | Profile bio text |
+| `instagram_url` | string | |
+| `youtube_url` | string | |
+| `facebook_url` | string | |
+| `twitter_url` | string | |
+| `email_verified` | bool | |
+| `help` | bool | |
+| `app_sig` | string | |
+| `last_update` | string | Unix timestamp in ms |
+| `bad_login_attempts` | int | |
+| `_created` | int | Unix timestamp |
+| `_modified` | int | Unix timestamp |
+| `_state` | int | |
+
+**Logout:**
+```
+POST https://app.advhub.net/api/logout.php
+Authorization: Bearer <user_token>
+```
+Response: `{"message":"Logged out"}`
+
+**Register:**
+```
+POST https://app.advhub.net/api/account_register.php
+```
+(Fields unknown. GET returns `{"message":"Method Not Allowed"}`)
+
+---
+
+### hub.dmdnavigation.com — Session cookie
+
+No programmatic login. Cloudflare Turnstile CAPTCHA is enforced server-side on the login form,
+regardless of user-agent or request format.
+
+**Obtaining a session:** Log in via browser at `https://hub.dmdnavigation.com/account/login/`,
+then copy the `dmdub_session` cookie value from DevTools → Application → Cookies.
 
 ```
 Cookie: dmdub_session=<value>
 ```
 
-Sessions persist across requests as long as the cookie is valid.
+Bearer tokens are rejected on hub endpoints (`{"error":"Authentication required"}`).
 
-**JSON API endpoints** (`/api/gpx-manager.php`, `/api/gpx-collection/`) require `Origin: https://hub.dmdnavigation.com` and `Referer: https://hub.dmdnavigation.com/account/profile/gpx/` headers in addition to the session cookie. No CSRF token needed.
+JSON API endpoints (`/api/gpx-manager.php`, `/api/gpx-collection/`) additionally require:
+```
+Origin: https://hub.dmdnavigation.com
+Referer: https://hub.dmdnavigation.com/account/profile/gpx/
+```
 
-**Upload endpoint** (`/account/profile/gpx/` with `ajax_action=bulk_upload_gpx`) requires only the session cookie — no CSRF token, no Origin/Referer header.
-
-The form-based location endpoints (`/account/profile/locations/`) do require a `csrf_token` field from the page HTML.
+The upload endpoint and form-based location endpoints do NOT need these headers, but location
+endpoints require a `csrf_token` from the page HTML.
 
 ---
 
-## GPX Manager — own files
+## GPX Proxy — personal files (app.advhub.net)
 
-All actions go through `/api/gpx-manager.php`.
+All actions: `https://app.advhub.net/api/gpx_proxy.php`
+Auth: `Authorization: Bearer <user_token>`
 
 ### List files
 
 ```
-GET /api/gpx-manager.php?action=list
+GET /api/gpx_proxy.php?action=list
 ```
 
-Optional query parameters:
+Returns a JSON array of GPX file objects.
 
-| Parameter | Description |
-|---|---|
-| `folder_id` | List contents of a specific folder |
-| `recursive=1` | Include files in subfolders |
+**Confirmed fields** (from live response, 140 files):
 
-Response:
+| Field | Type | Notes |
+|---|---|---|
+| `_id` | string | MongoDB ID |
+| `owner` | string | User ID |
+| `title` | string | |
+| `file` | string | Stored filename e.g. `"69826d2ac2261.gpx"` |
+| `show_on_map` | bool | "Loaded to DMD Map" state |
+| `continent` | string | e.g. `"Europe"` |
+| `country` | string | e.g. `"Germany"` |
+| `difficulty` | string | e.g. `"Medium"` |
+| `off_road_percentage` | int | 0–100 |
+| `best_time` | array | Season strings |
+| `vehicle` | array | Vehicle type strings |
+| `tags` | string | Comma-separated |
+| `description` | string | |
+| `warnings` | string | |
+| `image1_url` | string | |
+| `image2_url` | string | |
+| `youtube` | string | |
+| `public` | bool | |
+| `allow_download` | bool or null | |
+| `allow_index` | bool or null | |
+| `approved` | bool | |
+| `rating` | null or number | |
+| `rating_amount` | null or number | |
+| `grid1` | string | Tile grid reference e.g. `"1000_15_13"` |
+| `grid2` | string | |
+| `grid3` | string | |
+| `grid4` | string | |
+| `_state` | int | |
+| `_created` | int | Unix timestamp |
+| `_modified` | int | Unix timestamp |
+| `_mby` | null | |
+| `_cby` | null | |
 
-```json
-{
-  "success": true,
-  "files": [ /* GPX file objects */ ],
-  "folders": [ /* Folder objects */ ],
-  "current_folder": null,
-  "current_folder_parent_id": null,
-  "search_mode": false,
-  "folders_with_matches": [],
-  "has_filters": false
-}
+**Not present in list response** (contrary to earlier spec): `gpx_length_km`, `gpx_tracks_count`,
+`gpx_waypoints_count`, `color`, `folder_id`, `folder_name`, `file_path`.
+
+### Get single file
+
+```
+GET /api/gpx_proxy.php?action=get&id=<_id>
 ```
 
-### List all files (flat)
+Returns a single GPX object. Same fields as list. Only works for files owned by the
+authenticated user — returns `{"error":"Invalid or expired token"}` for other users' files.
+
+### Toggle "Loaded to DMD Map"
+
+```
+POST /api/gpx_proxy.php?action=update_visibility
+Authorization: Bearer <user_token>
+Content-Type: application/json
+
+{"data": {"_id": "<id>", "show_on_map": true}}
+```
+
+### Shared files list
+
+```
+GET /api/gpx_proxy.php?action=shares_list
+```
+
+Returns array of share objects. Fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `_id` | string | Share record ID |
+| `file_id` | string | ID of the shared GPX file |
+| `user_id` | string | ID of the user who shared it |
+| `user_email` | string | Email of the user who shared it |
+| `show_on_map` | bool | |
+| `_state` | int | |
+| `_created` | int | Unix timestamp |
+| `_modified` | int | Unix timestamp |
+
+The shared file itself (identified by `file_id`) cannot be fetched via `action=get` with the
+recipient's token — only the owner's token works.
+
+---
+
+## Locations Proxy (app.advhub.net)
+
+All actions: `https://app.advhub.net/api/locations_proxy.php`
+Auth: `Authorization: Bearer <user_token>`
+
+### List
+
+```
+GET /api/locations_proxy.php?action=list
+```
+
+Returns a JSON array of location objects.
+
+**Confirmed fields** (from live response, 48 locations):
+
+| Field | Type | Notes |
+|---|---|---|
+| `_id` | string | MongoDB ID |
+| `owner` | string | User ID |
+| `title` | string | |
+| `coordinates` | string | `"lat, lon"` e.g. `"49.310524, 8.559094"` |
+| `continent` | string | |
+| `country` | string | |
+| `category` | array | e.g. `["Campground", "View Point"]` |
+| `main_category` | string | |
+| `ground` | string | |
+| `crowded` | string | e.g. `"Rarely ever visited"` |
+| `best_time` | array | Season strings |
+| `vehicle` | array | Vehicle type strings |
+| `tags` | array | String array (NOT comma-separated string) |
+| `address` | string | |
+| `description` | string | May contain HTML |
+| `short_description` | string | |
+| `warnings` | string | |
+| `website` | string | |
+| `phone` | string | |
+| `youtube` | string | |
+| `image1_url` | string | Relative path e.g. `"/storage/users/.../image.jpg"` |
+| `image2_url` | string | |
+| `show_on_map` | bool | "Visible On DMD2 Map" |
+| `public` | bool | |
+| `approved` | bool | |
+| `grid1` | string | Tile grid reference |
+| `grid2` | string | |
+| `grid3` | string | |
+| `grid4` | string | |
+| `_state` | int | |
+| `_created` | int | Unix timestamp |
+| `_modified` | int | Unix timestamp |
+
+**Note:** `tags` is returned as an array, not a comma-separated string.
+`image1_url` is a relative path, not a full URL — prepend `https://hub.dmdnavigation.com`.
+
+### Create
+
+```
+POST /api/locations_proxy.php?action=create
+Authorization: Bearer <user_token>
+Content-Type: application/json
+```
+
+The `action` must be a **query string parameter**, not in the JSON body.
+
+Required body fields: `title`, `coordinates` (`"lat, lon"`), `continent`, `country`,
+`category` (array), `main_category`.
+
+Response: `{"_id": "<new_id>", "owner": "<user_id>", "_created": <ts>, "_modified": <ts>}`
+
+### Update
+
+```
+POST /api/locations_proxy.php?action=update
+Authorization: Bearer <user_token>
+Content-Type: application/json
+
+{"data": {"_id": "<id>", "<field>": "<value>"}}
+```
+
+### Delete
+
+```
+GET /api/locations_proxy.php?action=delete&id=<id>
+```
+
+The `id` must be a **query string parameter** — body fields `id` or `_id` do not work.
+Response: `{"ok": true}`
+
+---
+
+## Group Proxy (app.advhub.net)
+
+Endpoint: `https://app.advhub.net/api/group_proxy.php`
+Auth: `Authorization: Bearer <user_token>`
+
+The file exists and accepts requests. The only confirmed working action is `members`.
+All other tested actions (get, list, create, join, leave, etc.) return `{"error":"Unknown action: ..."}`.
+
+### Get group members
+
+```
+GET /api/group_proxy.php?action=members&group_id=<id>
+```
+
+The `group_id` must be a query string parameter — POST with JSON body does not work for this action.
+Returns an array of member objects (empty array `[]` when group has no members).
+The `group_id` format is not yet known — `active_group_id` in the login response is empty when
+not in a group.
+
+---
+
+## GPX Manager — hub (hub.dmdnavigation.com)
+
+All actions: `https://hub.dmdnavigation.com/api/gpx-manager.php`
+Auth: `Cookie: dmdub_session=<value>` + `Origin: https://hub.dmdnavigation.com` + `Referer: https://hub.dmdnavigation.com/account/profile/gpx/`
+
+### List files
+
+```
+GET /api/gpx-manager.php?action=list[&folder_id=<id>][&recursive=1]
+```
+
+### List all (flat, slim objects)
 
 ```
 GET /api/gpx-manager.php?action=listAll
 ```
 
-Response:
-
-```json
-{
-  "success": true,
-  "files": [ /* GPX file objects */ ],
-  "total_count": 0
-}
-```
+Returns slim objects with `id` (not `_id`), `title`, `file_path`, `file_size`, `folder_name`, `has_file`.
 
 ### List folders
 
 ```
 GET /api/gpx-manager.php?action=list_folders
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "folders": []
-}
 ```
 
 ### Get GPX info
@@ -91,606 +338,161 @@ Response:
 GET /api/gpx-manager.php?action=get_gpx_info&gpx_id=<id>
 ```
 
-Response:
+Returns full file object + parsed GPX content (tracks with points, length, etc.)
 
-```json
-{
-  "success": true,
-  "gpx": { /* GPX file object */ },
-  "parsed": { /* Parsed GPX content metadata */ }
-}
-```
-
-### Toggle "Loaded to DMD Map"
+### Mutations (JSON POST)
 
 ```
 POST /api/gpx-manager.php
 Content-Type: application/json
-
-{ "action": "toggle_show_on_map", "gpx_id": "<id>", "show_on_map": true }
+Origin: https://hub.dmdnavigation.com
+Referer: https://hub.dmdnavigation.com/account/profile/gpx/
 ```
 
-### Create folder
-
-```
-POST /api/gpx-manager.php
-Content-Type: application/json
-
-{ "action": "create_folder", "name": "<name>", "parent_id": "<parent_folder_id_or_null>" }
-```
-
-### Move item
-
-```
-POST /api/gpx-manager.php
-Content-Type: application/json
-
-{ "action": "move_item", "item_type": "file|folder", "item_id": "<id>", "target_folder_id": "<id>" }
-```
-
-### Set color
-
-```
-POST /api/gpx-manager.php
-Content-Type: application/json
-
-{ "action": "set_color", "gpx_id": "<id>", "color": "<color>" }
-```
-
-### Duplicate
-
-```
-POST /api/gpx-manager.php
-Content-Type: application/json
-
-{ "action": "duplicate", "gpx_id": "<id>" }
-```
-
-### Delete file
-
-```
-POST /api/gpx-manager.php
-Content-Type: application/json
-
-{ "action": "delete", "gpx_id": "<id>" }
-```
-
-### Delete folder
-
-```
-POST /api/gpx-manager.php
-Content-Type: application/json
-
-{ "action": "delete_folder", "folder_id": "<id>" }
-```
+| Action body | Description |
+|---|---|
+| `{"action":"toggle_show_on_map","gpx_id":"<id>","show_on_map":true}` | Toggle map visibility |
+| `{"action":"create_folder","name":"<name>","parent_id":"<id_or_null>"}` | Create folder |
+| `{"action":"move_item","item_type":"file","item_id":"<id>","target_folder_id":"<id>"}` | Move file |
+| `{"action":"set_color","gpx_id":"<id>","color":"<color>"}` | Set color |
+| `{"action":"duplicate","gpx_id":"<id>"}` | Duplicate |
+| `{"action":"delete","gpx_id":"<id>"}` | Delete file |
+| `{"action":"delete_folder","folder_id":"<id>"}` | Delete folder |
 
 ---
 
-## Upload GPX
-
-Requires `dmdub_session` cookie. No CSRF token, no Origin/Referer needed.
+## GPX Upload (hub.dmdnavigation.com)
 
 ```
 POST /account/profile/gpx/
 Content-Type: multipart/form-data
+Cookie: dmdub_session=<value>
 ```
 
-| Field | Required | Description |
+No CSRF token, no Origin/Referer headers needed.
+
+| Field | Required | Notes |
 |---|---|---|
-| `ajax_action` | yes | Must be `"bulk_upload_gpx"` |
-| `gpx_file` | yes | GPX file content |
-| `continent` | yes | e.g. `"Europe"`, `"Asia"`, `"North America"` |
+| `ajax_action` | **yes** | Must be exactly `"bulk_upload_gpx"` — omitting this returns the HTML page |
+| `gpx_file` | yes | File content |
+| `continent` | yes | e.g. `"Europe"` |
 | `country` | yes | Country name |
-| `gpx_meta_description` | no | From GPX `<metadata><desc>` |
-| `gpx_meta_author` | no | From GPX `<metadata><author><name>` |
-| `gpx_meta_link` | no | From GPX `<metadata><link href>` |
-| `gpx_meta_keywords` | no | From GPX `<metadata><keywords>` |
+| `gpx_meta_description` | no | From `<metadata><desc>` |
+| `gpx_meta_author` | no | From `<metadata><author><name>` |
+| `gpx_meta_link` | no | From `<metadata><link href>` |
+| `gpx_meta_keywords` | no | From `<metadata><keywords>` |
 | `folder_id` | no | Target folder ID |
 
-Response:
-
-```json
-{
-  "success": true,
-  "gpx_id": "<id>",
-  "title": "<derived title>",
-  "length_km": 42.5,
-  "tracks": 1,
-  "routes": 0,
-  "waypoints": 0
-}
-```
-
-On failure: `{ "success": false, "error": "..." }`
-
-**Note:** There is no GPX upload path on `app.advhub.net`. Upload requires the hub session cookie.
-
-The hub automatically reverse-geocodes the first track point to populate continent/country if not provided. The client-side JS uses `/core/helpers/locations/nominatim_proxy.php` for this:
-
-```
-POST /core/helpers/locations/nominatim_proxy.php
-Content-Type: application/json
-
-{ "action": "reverse", "lat": 49.3105, "lon": 8.5586, "zoom": 5 }
-```
+Response: `{"success":true,"gpx_id":"<id>","title":"...","length_km":1.34,"tracks":1,"routes":0,"waypoints":0}`
 
 ---
 
-## Community Collection
-
-Endpoints for GPX files shared/saved from the community hub (not uploaded by the authenticated user).
-
-### List collection files
-
-```
-GET /api/gpx-collection/?action=list
-```
-
-Optional query parameters:
-
-| Parameter | Description |
-|---|---|
-| `folder_id` | Scope to folder |
-| `recursive=1` | Include subfolders |
-| `vehicles` | Comma-separated vehicle types |
-| `difficulties` | Comma-separated difficulty levels |
-| `tags` | Comma-separated tags |
-| `loaded` | Filter by loaded status |
-| `color` | Filter by color |
-
-Response:
-
-```json
-{
-  "success": true,
-  "files": [ /* GPX file objects */ ]
-}
-```
-
-### Toggle "Loaded to DMD Map" (collection file)
-
-```
-POST /api/gpx-collection/
-Content-Type: application/json
-
-{ "action": "toggle_show_on_map", "file_id": "<id>", "show_on_map": true }
-```
-
-Note: uses `file_id` (not `gpx_id`) for collection files.
-
-### Remove from collection
-
-```
-POST /api/gpx-collection/
-Content-Type: application/json
-
-{ "action": "remove_from_collection", "file_id": "<id>" }
-```
-
-### Move community item
-
-```
-POST /api/gpx-collection/
-Content-Type: application/json
-
-{ "action": "move_community_item", "file_id": "<id>", "target_folder_id": "<id>" }
-```
-
----
-
-## Download / Export
-
-### Download single file
+## GPX Download (hub.dmdnavigation.com)
 
 ```
 GET /api/gpx-download/?id=<gpx_id>
+Cookie: dmdub_session=<value>
 ```
-
-Returns the GPX file as `application/xml`.
-
-### Download public file (no auth required)
+Authenticated download. Returns `application/xml`.
 
 ```
 GET /api/gpx-view/?id=<gpx_id>
 ```
-
-Returns the GPX file as `application/xml`.
-
-### Export multiple files
-
-```
-POST /api/gpx-export.php
-Content-Type: application/json
-
-{ "file_ids": ["<id1>", "<id2>"] }
-```
+Public download — no auth required.
 
 ---
 
-## GPX File Object
+## Community GPX Collection (hub.dmdnavigation.com)
 
-### Full object (`action=list`, `action=get_gpx_info`)
+All actions: `https://hub.dmdnavigation.com/api/gpx-collection/`
+Auth: `Cookie: dmdub_session=<value>` + Origin/Referer headers (same as gpx-manager).
+Bearer token is rejected.
 
-| Field | Type | Description |
-|---|---|---|
-| `_id` | string | Unique ID (MongoDB-style hex) |
-| `owner` | string | Owner user ID |
-| `title` | string | Display title |
-| `description` | string | |
-| `warnings` | string | |
-| `continent` | string | e.g. `"Europe"` |
-| `country` | string | e.g. `"Germany"` |
-| `best_time` | array | e.g. `["Spring", "Summer"]` |
-| `vehicle` | array | Vehicle types |
-| `difficulty` | string | e.g. `"Medium"` |
-| `off_road_percentage` | number | 0–100 |
-| `file` | string | Stored filename |
-| `file_path` | string | Storage path (relative URL) |
-| `image1_url` | string | |
-| `image2_url` | string | |
-| `youtube` | string | YouTube URL |
-| `public` | boolean | Publicly visible |
-| `approved` | boolean | |
-| `show_on_map` | boolean | "Loaded to DMD Map" state |
-| `allow_index` | boolean | |
-| `allow_download` | boolean | |
-| `tags` | string | Comma-separated tags |
-| `gpx_length_km` | number | Total track length |
-| `gpx_tracks_count` | number | |
-| `gpx_routes_count` | number | |
-| `gpx_waypoints_count` | number | |
-| `gpx_meta_time` | string | Timestamp from GPX `<time>` metadata |
-| `color` | string | User-assigned colour |
-| `_created` | number | Unix timestamp |
-| `_modified` | number | Unix timestamp |
-| `_state` | number | |
-| `_model` | string | Always `"gpx"` |
-
-### Slim object (`action=listAll`)
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | string | Unique ID (note: `id` not `_id`) |
-| `title` | string | |
-| `file_path` | string | Storage path |
-| `file_size` | number | Bytes |
-| `folder_name` | string | e.g. `"Root"` |
-| `has_file` | boolean | |
-
-### Parsed GPX content (`action=get_gpx_info` → `parsed`)
-
-```json
-{
-  "valid": true,
-  "name": "",
-  "description": "...",
-  "author": "",
-  "tracks": [
-    {
-      "name": "Track name",
-      "description": "",
-      "points_count": 4642,
-      "length_km": 286.21,
-      "points": [
-        { "lat": 48.528, "lon": 8.837, "ele": null, "time": null }
-      ]
-    }
-  ]
-}
+### List
 ```
+GET /api/gpx-collection/?action=list[&folder_id=<id>][&recursive=1][&vehicles=...][&difficulties=...][&tags=...][&loaded=...][&color=...]
+```
+
+### Mutations (JSON POST)
+
+| Action | Notes |
+|---|---|
+| `{"action":"toggle_show_on_map","file_id":"<id>","show_on_map":true}` | Uses `file_id`, not `gpx_id` |
+| `{"action":"remove_from_collection","file_id":"<id>"}` | |
+| `{"action":"move_community_item","file_id":"<id>","target_folder_id":"<id>"}` | |
 
 ---
 
-## Locations
+## Locations — hub (hub.dmdnavigation.com)
 
-All location management is handled via form POSTs to the page URLs (not a separate JSON API). The page is at `/account/profile/locations/`.
+Form-based. All POSTs require `csrf_token` from page HTML.
+Obtain: `GET /account/profile/locations/` → extract `<input name="csrf_token" value="...">`.
+Location data is embedded in the page as a JS array — no JSON list endpoint.
 
-All POST requests require a `csrf_token` field. Obtain it from the page HTML (`<input type="hidden" name="csrf_token" value="...">`).
-
-### List locations
-
-```
-GET /account/profile/locations/
-```
-
-Location data is embedded in the page as a JavaScript array — there is no dedicated JSON list endpoint. Filter parameters can be passed as query strings to the GET request.
-
-### Add location
-
+### Add
 ```
 POST /account/profile/locations/add
 Content-Type: application/x-www-form-urlencoded
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `csrf_token` | string | Required |
-| `title` | string | Location name |
-| `coordinates` | string | `"lat, lon"` e.g. `"49.310519, 8.558673"` |
-| `continent_specific` | string | e.g. `"Europe"` |
-| `country_specific` | string | Country name |
-| `category[]` | string (repeat) | One or more from the category list below |
-| `main_category` | string | Primary category |
-| `ground` | string | Ground type |
-| `crowded` | string | |
-| `best_time[]` | string (repeat) | `Spring`, `Summer`, `Autumn`, `Winter` |
-| `vehicle[]` | string (repeat) | Vehicle types (see list below) |
-| `public` | `true`/`false` | Publicly visible (requires admin approval) |
-| `show_on_map` | `true`/`false` | "Visible On DMD2 Map" |
-| `short_description` | string | |
-| `description` | string | |
-| `warnings` | string | |
-| `address` | string | |
-| `tags` | string | Comma-separated |
-| `website` | string | |
-| `phone` | string | |
-| `image_primary` | file | Primary image upload |
-| `image_secondary` | file | Secondary image upload |
-| `youtube_link` | string | YouTube URL |
-
-**Category values:**
-Fuel Station, Restaurant, Accommodation, View Point, Cave, Campground, Peak, Wild Camping Spot, Water Source, Picnic Area, River or Lake Side, Historic / Ruins, Monument, Natural Highlight, Motorcycle & Car Parking, RV Parking, Swim (Lake / River / Beach), Start of a Good Trail, Other (will not be public), Fence (will not be public), Home (will not be public), Work (will not be public), Danger (will not be public)
-
-**Vehicle values:**
-Road Only Vehicle, Adventure Motorcycle, Enduro Motorcycle, 4x4 Car / Pickup / Small Van, 4x4 Big Vans / RV, ATV, SSV
-
-### Edit location
-
+### Edit
 ```
 POST /account/profile/locations/edit/<location_id>
 Content-Type: application/x-www-form-urlencoded
 ```
 
-Same fields as Add. The location ID is in the URL path.
-
-### Toggle "Visible On DMD2 Map"
-
+### Toggle show_on_map
 ```
 POST /account/profile/locations/
-Content-Type: application/x-www-form-urlencoded
+csrf_token=<t>&_id=<id>&submit_toggle_show_on_map=1&current_show_on_map=<0|1>&show_on_map=<1|0>
 ```
 
-| Field | Value |
-|---|---|
-| `csrf_token` | current token |
-| `_id` | location ID |
-| `submit_toggle_show_on_map` | `1` |
-| `current_show_on_map` | `0` or `1` (current state) |
-| `show_on_map` | `1` or `0` (desired new state) |
-
-### Delete location
-
+### Delete
 ```
 POST /account/profile/locations/
-Content-Type: application/x-www-form-urlencoded
+csrf_token=<t>&_id=<id>&submit_change_location_delete=1
 ```
 
-| Field | Value |
-|---|---|
-| `csrf_token` | current token |
-| `_id` | location ID |
-| `submit_change_location_delete` | `1` |
-
-### Import locations (parse step)
-
+### Import (parse step)
 ```
 POST /account/profile/locations/
 Content-Type: multipart/form-data
+import_file=<file>&submit_parse_locations=1
 ```
+Response: `{"success":true,"locations":[...]}`
 
-| Field | Description |
-|---|---|
-| `import_file` | File to parse (GPX, KML, etc.) |
-| `submit_parse_locations` | `1` |
-
-Response:
-
-```json
-{
-  "success": true,
-  "locations": [ /* parsed location objects */ ]
-}
-```
-
-### Import locations (confirm step)
-
+### Import (confirm step)
 ```
 POST /account/profile/locations/
 Content-Type: application/json
-
-{
-  "submit_import_selected": "1",
-  "locations": [ /* location objects from parse step */ ],
-  "import_show_on_map": true
-}
+{"submit_import_selected":"1","locations":[...],"import_show_on_map":true}
 ```
-
-Response:
-
-```json
-{
-  "success": true,
-  "imported": 3,
-  "skipped": 0
-}
-```
-
-### Location object
-
-Fields embedded in the page's JS data (map overlay):
-
-| Field | Type | Description |
-|---|---|---|
-| `_id` | string | Unique ID |
-| `title` | string | |
-| `coordinates` | string | `"lat, lon"` |
-| `category` | array | e.g. `["Campground", "View Point"]` |
-| `main_category` | string | |
-| `ground` | string | |
-| `vehicle` | array | |
-| `image1_url` | string | |
-| `show_on_map` | boolean | |
-| `is_favorite` | boolean | |
+Response: `{"success":true,"imported":3,"skipped":0}`
 
 ---
 
-## Public Browse Endpoints
-
-These do not require authentication.
-
-### Browse community GPX list (fragment)
+## Reverse Geocode Proxy (hub.dmdnavigation.com)
 
 ```
-GET /gpx_frag/gpx_list_fragment/
+POST /core/helpers/locations/nominatim_proxy.php
+Content-Type: application/json
+
+{"action":"reverse","lat":49.3105,"lon":8.5586,"zoom":5}
 ```
 
-Returns an HTML fragment of the community GPX listing.
-
-### GPX map data
-
-```
-GET /api/gpx-map-data
-```
-
-Returns map overlay data for the GPX browse page.
-
-### View a community GPX entry
-
-```
-GET /gpx/view/<gpx_id>/
-```
-
-Returns the HTML page for a community-shared GPX file.
+Returns Nominatim-style response. Used to auto-populate continent/country fields.
 
 ---
 
-## Android App API (app.advhub.net)
-
-The DMD2 Android app (`com.thorkracing.dmd2launcher`) and other clients (Rumo web planner) communicate with a backend at `app.advhub.net`. This is the preferred programmatic API — unlike `hub.dmdnavigation.com`, it has no CAPTCHA on login.
-
-### Hosts
+## Other Confirmed Hosts
 
 | Host | Purpose |
 |---|---|
-| `app.advhub.net` | Main app API, GPX proxy, locations proxy |
-| `api.advhub.net` | File storage and group GPX uploads |
-| `router.advhub.net` | BRouter-based route calculation |
-| `fastmaps.advhub.net` | Map tile CDN |
+| `app.advhub.net` | Main app API (Bearer token) |
+| `api.advhub.net` | Group GPX file storage |
+| `hub.dmdnavigation.com` | Web hub (session cookie) |
 
-### Authentication
-
-Uses `Bearer` token authentication. The token is the `user_token` field from the login response.
-
-```
-Authorization: Bearer <user_token>
-```
-
-**Login:**
-
-```
-POST https://app.advhub.net/api/dmd_connector.php
-Content-Type: application/json
-
-{ "email": "<email>", "password": "<password>" }
-```
-
-Response includes (among other profile fields):
-
-| Field | Description |
-|---|---|
-| `_id` | MongoDB user ID |
-| `user_token` | Bearer token for API auth (64-char hex) |
-| `token` | Device/group pairing token (`rumo_` prefix) — not for API auth |
-| `web_id` | WordPress user ID |
-
-The `user_token` expires and must be refreshed by re-authenticating. A 401 response indicates an expired token.
-
-The same endpoint is also accessible at `https://hub.dmdnavigation.com/api/dmd_connector.php` (same response, no session cookie set).
-
-**Logout:** `POST https://app.advhub.net/api/logout.php`
-
-**Register:** `POST https://app.advhub.net/api/account_register.php`
-
-### GPX Proxy (personal files)
-
-All actions go through `https://app.advhub.net/api/gpx_proxy.php`.
-
-#### List files
-
-```
-GET https://app.advhub.net/api/gpx_proxy.php?action=list
-```
-
-Returns a JSON array of GPX file objects. Each object includes `_id`, `title`, `show_on_map`, `file_path`, `gpx_length_km`, `continent`, `country`, `color`, `folder_id`, `folder_name`, `_created`, `_modified`.
-
-#### Get single file
-
-```
-GET https://app.advhub.net/api/gpx_proxy.php?action=get&id=<id>
-```
-
-#### Toggle "Loaded to DMD Map"
-
-```
-POST https://app.advhub.net/api/gpx_proxy.php?action=update_visibility
-Content-Type: application/json
-
-{ "data": { "_id": "<id>", "show_on_map": true } }
-```
-
-#### Shared files list
-
-```
-GET https://app.advhub.net/api/gpx_proxy.php?action=shares_list
-```
-
-#### Toggle shared file visibility
-
-```
-POST https://app.advhub.net/api/gpx_proxy.php?action=update_share_visibility
-```
-
-### Locations Proxy (personal locations)
-
-All actions go through `https://app.advhub.net/api/locations_proxy.php`.
-
-#### List locations
-
-```
-GET https://app.advhub.net/api/locations_proxy.php?action=list
-```
-
-Returns a JSON array. Each object has the same fields as the hub location object (see Location object section), plus `owner` and other metadata.
-
-#### Create location
-
-```
-POST https://app.advhub.net/api/locations_proxy.php?action=create
-Content-Type: application/json
-```
-
-Body: location fields (see hub Add location for field list). Required: `title`, `coordinates` (`"lat, lon"`), `continent`, `country`, `category` (array), `main_category`. Optional: `show_on_map`, `public`, `description`, `short_description`, `warnings`, `tags`, `vehicle` (array), `best_time` (array), `ground`, `address`, `website`, `phone`, `youtube`.
-
-Response: `{ "_id": "<new_id>", "owner": "<user_id>", ... }`
-
-#### Update location
-
-```
-POST https://app.advhub.net/api/locations_proxy.php?action=update
-Content-Type: application/json
-
-{ "data": { "_id": "<id>", "<field>": "<value>", ... } }
-```
-
-#### Delete location
-
-```
-GET/POST https://app.advhub.net/api/locations_proxy.php?action=delete&id=<id>
-```
-
-The `id` must be a query string parameter.
-
-### Group GPX (group ride file sync)
+### Group GPX (api.advhub.net)
 
 ```
 POST https://api.advhub.net/group_gpx/upload.php
@@ -701,14 +503,12 @@ Content-Type: multipart/form-data
 POST https://api.advhub.net/group_gpx/delete.php
 ```
 
-Storage base: `https://api.advhub.net/group_gpx/uploads/`
+Storage base URL: `https://api.advhub.net/group_gpx/uploads/`
 
-### User profile
+### User profile / avatar
 
 ```
 GET https://app.advhub.net/users/view/<user_id>
 ```
 
-User avatar storage: `https://app.advhub.net/storage/users/<user_id>/`
-
-Legacy avatar path also found at: `https://hub.dmdnavigation.com/storage/users/`
+Avatar storage: `https://app.advhub.net/storage/users/<user_id>/`
