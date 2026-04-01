@@ -26,3 +26,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - My Locations: list with category-colored indicator dot, per-location DMD2 toggle
 - Profile: read-only display of account fields from login response (name, email, device, license, points)
 - User profile fields (displayName, email, deviceName, mapLicense, communityPoints) persisted at login
+- Live tab: GPS position display, active group ID from login response, toggle to start/stop sending location to the hub every second

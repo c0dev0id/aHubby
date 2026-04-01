@@ -53,6 +53,11 @@ redirects to the login screen. Passwords are not persisted.
 - Category color system: dot-shaped `View` with runtime `setColorFilter()` on a `circle.xml` shape drawable
 - Toggle label: "Show in DMD2" (inactive) / "✓ In DMD2" (active) — controls sync to DMD2 navigation device
 
+### Phase 2 (continued)
+- Live tab: GPS via `LocationManager.GPS_PROVIDER` (no Play Services), location sent to hub at 1 Hz via `ScheduledExecutorService`; rate-limit errors silently ignored (next tick succeeds)
+- Active group ID persisted from login response; group listing deferred (WebSocket-only, no REST endpoint)
+- Speed unit conversion: Android `getSpeed()` returns m/s → multiply by 3.6 for km/h expected by API
+
 ### Phase 3 (planned)
 - GPX upload via `hub.dmdnavigation.com` (hub session cookie required)
 - Location delete
