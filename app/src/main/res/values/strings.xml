@@ -8,4 +8,7 @@
     <string name="error_fields_required">Email and password are required</string>
     <string name="error_login_failed">Login failed</string>
     <string name="label_connected">Connected to DMD Hub</string>
+    <string name="label_token">Bearer token:</string>
+    <string name="action_fetch_gpx">Fetch GPX</string>
+    <string name="action_fetch_locations">Fetch Locations</string>
 </resources>

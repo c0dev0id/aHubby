@@ -69,6 +69,35 @@ public class ApiClient {
         }
     }
 
+    public String fetchGpxList(String token) throws IOException {
+        return get(BASE_URL + "/api/gpx_proxy.php?action=list", token);
+    }
+
+    public String fetchLocationsList(String token) throws IOException {
+        return get(BASE_URL + "/api/locations_proxy.php?action=list", token);
+    }
+
+    private String get(String url, String token) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        try {
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setConnectTimeout(15_000);
+            conn.setReadTimeout(15_000);
+
+            int status = conn.getResponseCode();
+            InputStream is = status < 400 ? conn.getInputStream() : conn.getErrorStream();
+            String body = readStream(is);
+
+            if (status != 200) {
+                throw new IOException("HTTP " + status + ": " + body);
+            }
+            return body;
+        } finally {
+            conn.disconnect();
+        }
+    }
+
     private static String readStream(InputStream is) throws IOException {
         char[] buf = new char[4096];
         StringBuilder sb = new StringBuilder();
