@@ -491,6 +491,110 @@ Returns Nominatim-style response. Used to auto-populate continent/country fields
 
 ---
 
+## Live Location (app.advhub.net)
+
+Auth: `Authorization: Bearer <user_token>`
+
+### Broadcast location
+
+```
+POST /api/location_update.php
+Authorization: Bearer <user_token>
+Content-Type: application/json
+
+{"data": {"_id": "<user_id>", "lat": <float>, "lon": <float>, "speed": <float>, "heading": <int>, "altitude": <float>, "accuracy": <float>}}
+```
+
+`_id` must match the token owner — other values return `{"error":"Forbidden — _id does not match token owner"}`.
+
+Response: `{"ok": true}`
+
+**Rate limited.** Too-frequent POSTs return `{"error":"Rate limit exceeded","retry_after_ms":<ms>}`. DMD posts at roughly 1 Hz.
+
+Additional optional fields (confirmed present in DMD code): `bearing`, `online`, `active`, `device`, `user_id`.
+
+The login response reflects the current state: `share_location` (bool), `speed` (string), `location` (custom-encoded string — format unknown), `active_device_id`, `active_device_at`.
+
+### Poll for incoming navigate-to
+
+```
+GET /api/navigate-to.php
+Authorization: Bearer <user_token>
+```
+
+Response: `{"success":true,"data":{"has_destination":false}}`
+
+Used by DMD to detect when a group member has pushed a navigate-to target. Poll on a timer.
+
+### Clear navigate-to destination
+
+```
+POST /api/navigate-to.php
+Authorization: Bearer <user_token>
+Content-Type: application/json
+
+{"action": "clear"}
+```
+
+Response: `{"success":true}`
+
+The action name for *sending* a destination to group members is not yet confirmed (requires an active group context to test).
+
+### Group members with live location
+
+```
+GET /api/group_proxy.php?action=members&group_id=<id>
+Authorization: Bearer <user_token>
+```
+
+Returns an array of `UserInfo` objects. Confirmed fields (from DMD source):
+
+| Field | Notes |
+|---|---|
+| `_id` | MongoDB user ID |
+| `name` / `displayName` / `displayname` | Display name variants |
+| `avatar_url` | Avatar image URL |
+| `color` | Rider color on map |
+| `latitude` / `longitude` | Current GPS position |
+| `altitude` | Metres |
+| `accuracy` | GPS accuracy |
+| `speed` | Current speed |
+| `heading` / `bearing` | Direction |
+| `online` | Boolean |
+| `active` | Boolean |
+| `share_location` | Boolean |
+| `last_update` | Timestamp |
+| `token` / `user_token` | Group pairing token / auth token |
+| `device` / `device_name` | Active device |
+| `location` | Encoded location string (same format as login response) |
+
+`group_id` comes from `active_group_id` in the login response (empty string when not in a group).
+
+---
+
+## Apps Proxy (app.advhub.net)
+
+```
+GET /api/apps_proxy.php
+Authorization: Bearer <user_token>
+```
+
+Returns current version info and APK download URLs for all DMD ecosystem apps:
+`dmd2_version`, `dmd2_apk_url`, `buttons_version`, `buttons_apk_url`, `auto_off_version`, `auto_off_apk_url`, `sos_version`, `sos_apk_url`, `lora_version`, `lora_apk_url`, and corresponding `*_changes` strings.
+
+---
+
+## Hub Locations Proxy (app.advhub.net)
+
+```
+GET /api/hub_locations_proxy.php
+Authorization: Bearer <user_token>
+```
+
+Returns community/public locations from all users. Same field structure as `locations_proxy.php`.
+
+---
+
 ## Other Confirmed Hosts
 
 | Host | Purpose |
@@ -498,6 +602,9 @@ Returns Nominatim-style response. Used to auto-populate continent/country fields
 | `app.advhub.net` | Main app API (Bearer token) |
 | `api.advhub.net` | Group GPX file storage |
 | `hub.dmdnavigation.com` | Web hub (session cookie) |
+| `router.advhub.net` | BRouter routing engine (`/api/brouter`) |
+| `fastmaps.advhub.net` | Map tile server |
+| `dmd-maps.b-cdn.net` | Map tiles CDN, speed camera GPX files, routing data |
 
 ### Group GPX (api.advhub.net)
 

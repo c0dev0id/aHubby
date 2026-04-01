@@ -56,4 +56,24 @@ redirects to the login screen. Passwords are not persisted.
 ### Phase 3 (planned)
 - GPX upload via `hub.dmdnavigation.com` (hub session cookie required)
 - Location delete
-- Live location (requires reverse engineering of group_proxy position API)
+- Live location tab: display own position + group members' live positions
+
+## Live Location API (researched via ADB + APK analysis)
+
+DMD broadcasts location by polling `POST /api/location_update.php` at ~1 Hz. The endpoint
+accepts `{"data":{"_id":"<user_id>","lat":...,"lon":...,"speed":...,"heading":...,"altitude":...,"accuracy":...}}`.
+Rate limited at roughly 500 ms minimum interval.
+
+Group members' live positions are read via `GET /api/group_proxy.php?action=members&group_id=<id>`,
+which returns an array of `UserInfo` objects with `latitude`, `longitude`, `speed`, `heading`, etc.
+The `active_group_id` comes from the login response (empty when not in a group).
+
+Navigate-to: `GET /api/navigate-to.php` polls for navigation targets pushed by group members;
+`POST` with `action=clear` dismisses them.
+
+The `location` field in the login response is a custom-encoded string (format not yet decoded).
+The plain `latitude`/`longitude` floats are only exposed in the group members endpoint.
+
+DMD uses OkHttp3 WebSocket internally for real-time group updates (`groupRideSlowScheduler`),
+but the WebSocket URL is constructed at runtime and is not stored as a literal in the APK.
+The HTTP polling path (`location_update.php`) is sufficient for the aHubby Phase 3 use case.
