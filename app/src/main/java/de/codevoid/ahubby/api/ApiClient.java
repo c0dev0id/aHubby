@@ -74,16 +74,13 @@ public class ApiClient {
                 throw new IOException(msg);
             }
 
-            JSONObject device = json.optJSONObject("active_device");
-            String deviceName = device != null ? device.optString("device_name", "") : "";
-
             return new LoginResult(
                     token,
                     json.optString("_id", ""),
                     json.optString("email", email),
-                    json.optString("display_name", ""),
-                    deviceName,
-                    json.optInt("map_license", 0) != 0,
+                    json.optString("displayname", ""),
+                    json.optString("active_device_name", ""),
+                    "true".equals(json.optString("map_license", "false")),
                     json.optInt("community_points", 0)
             );
         } finally {

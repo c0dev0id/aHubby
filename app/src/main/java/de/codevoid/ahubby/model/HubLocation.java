@@ -53,8 +53,8 @@ public class HubLocation {
                         o.optString("main_category", ""),
                         cats,
                         o.optString("coordinates", ""),
-                        o.optInt("show_on_map", 0) != 0,
-                        o.optInt("public", 0) != 0,
+                        o.optBoolean("show_on_map", false),
+                        o.optBoolean("public", false),
                         o.optString("short_description", "")
                 ));
             }

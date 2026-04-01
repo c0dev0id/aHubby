@@ -37,8 +37,8 @@ public class GpxFile {
                         o.optString("title", ""),
                         o.optString("country", ""),
                         o.optString("continent", ""),
-                        o.optInt("show_on_map", 0) != 0,
-                        o.optInt("public", 0) != 0,
+                        o.optBoolean("show_on_map", false),
+                        o.optBoolean("public", false),
                         o.optString("description", "")
                 ));
             }
