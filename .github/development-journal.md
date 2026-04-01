@@ -7,7 +7,7 @@
 | Language | Java 17 |
 | Platform | Android minSdk 34 (API 34), targetSdk 35 |
 | Build | Gradle 8.7, AGP 8.5.2 |
-| HTTP | `java.net.http.HttpClient` (stdlib) |
+| HTTP | `HttpURLConnection` (stdlib, `java.net`) |
 | JSON | `org.json` (bundled with Android) |
 | UI | Material3 (`Theme.Material3.DayNight.NoActionBar`) + AndroidX AppCompat |
 
@@ -17,12 +17,12 @@
 Consistency with the companion project (androdash). No Kotlin compiler overhead in CI.
 
 ### minSdk 34 (Android 14)
-DMD devices run recent Android. API 34 gives access to `java.net.http.HttpClient` without
-compatibility shims and avoids legacy codepaths.
+DMD devices run recent Android. API 34 avoids legacy codepaths and compatibility shims.
 
 ### No external HTTP library
-`java.net.http.HttpClient` (available from API 26+) covers all needs. Keeps the dependency
-footprint minimal — no OkHttp, no Retrofit.
+`HttpURLConnection` (`java.net`) is available across all Android versions and covers all needs.
+`java.net.http.HttpClient` (Java 11 SE module) is NOT available on Android — ART does not
+include Java SE modules. Keeps the dependency footprint minimal — no OkHttp, no Retrofit.
 
 ### No external JSON library
 `org.json` is bundled with the Android runtime. No additional dependency needed for parsing
