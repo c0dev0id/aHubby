@@ -1,63 +1,78 @@
-This file contains important informations for AI agents like claude, chatgpt and copilot.
+# CLAUDE.md
 
-# *MOST IMPORTANT RULES THAT MUST BE FOLLOWED*
-- *Always commit* every logical step! Don't batch unrelated changes into one commit.
-- *Always rebase* the working branch onto the latest main (or master, if main doesn't exist) at the end of a task. Resolve any conflicts during the rebase.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Keep A Changelog
-Maintain a CHANGELOG.md file in every project, following the specification at:
-https://raw.githubusercontent.com/olivierlacan/keep-a-changelog/refs/heads/main/CHANGELOG.md
-Update it after each development task with a human-readable description of what changed.
-Don't list individual commits. Skip entries for trivial or non-user-facing changes that don't affect app behavior.
+## Project
 
-# Development Journal
-Maintain a file at .github/development-journal.md containing:
-- Software Stack Information
-- Key Decisions (context and rationale to keep in mind for future work)
-- Core Features
+**aHubby** — Android companion app for [DMD Navigation Hub](https://hub.dmdnavigation.com).
 
-# Git Configuration Rules
-All git operations are performed on behalf of the user. Before any git operation, configure:
+### Roadmap
+
+**Phase 1 (current):**
+- App scaffold and build pipeline (adapted from `/home/sdk/androdash/.github/workflows/build.yaml`)
+- Authentication with the DMD Hub (`app.advhub.net` Bearer token)
+- Feature discovery / API state
+
+**Phase 2:**
+- UI concept discussion
+- GPX Manager and Locations UI
+
+**Phase 3:** TBD
+
+## Implementation
+
+Android app. Build pipeline CI/CD via GitHub Actions.
+
+**Do not attempt to build Android projects locally.** All builds are handled by CI/CD. AGP cannot be accessed due to firewall restrictions — do not try to work around this.
+
+## Commands
+
+```sh
+./gradlew lint            # static analysis
+./gradlew assembleRelease # build release APK (CI only)
+./gradlew test            # run unit tests
+./gradlew test --tests "com.example.FooTest#methodName"  # run single test
+```
+
+## Git
+
 - user.name = c0dev0id
 - user.email = sh+git@codevoid.de
+- Always rebase the working branch onto the latest `main` at the end of a task. Resolve conflicts during the rebase.
+- Remove all lines containing the word "claude" from commit and pull request messages.
+- If a `.gh_token` file is present, use it to access GitHub and read CI/CD workflow results.
 
-Never add Co-Authored-By or any other personal attribution to commits or pull requests.
+## Changelog
 
-Remove all lines that contain the word "claude" from pull request and commit messages.
+Maintain `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com). Update after each development task with a human-readable summary of what changed. Do not list individual commits. Skip trivial or non-user-facing changes.
 
-If a .gh_token file is present, use the token to access GitHub and read CI/CD workflow results.
+## Development Journal
 
-# Build Constraints
-Do not attempt to build Android projects locally. All builds are handled by CI/CD.
-AGP cannot be accessed due to firewall restrictions. Do not try to work around this.
+Maintain `.github/development-journal.md` containing:
+- Software stack information
+- Key decisions (context and rationale for future work)
+- Core features
 
-# Library and Framework usage
-- Always use the latest version available
+## Code Style
 
-# Code Style
-- KISS — Keep it Simple, Stupid.
-- Write testable code.
-- Write unit tests that verify assumptions and cover edge cases.
-- No database or schema migration code during development (version < 1.0.0).
+- KISS. Write testable code with unit tests covering assumptions and edge cases.
+- No database/schema migration code during development (version < 1.0.0).
+- Always use the latest available library versions.
+- Before implementing a feature from scratch, check whether libraries and frameworks already in use provide built-in support — possibly in a different form. Explain what's available and let the user decide.
 
-# Communication Standards
-- Be clear, direct, and evidence-based.
-- Push back when something seems wrong or suboptimal.
-- If the user uses imprecise terminology, provide the correct term.
+## Auth
 
-# Finding Solutions
-- Don't jump to conclusions. If there's any ambiguity, ask for clarification first.
-- The obvious fix is often not the right one. Approach problems from multiple angles:
-  - Consider whether a design pattern would prevent recurring issues.
-  - Evaluate whether a different library, technique, or component is a better fit than working around limitations of the current approach.
-  - Step back and examine the architecture — the root cause may point to a structural improvement rather than a local patch.
+Two backends, two auth paths:
 
-# About the User (Target Group Definition)
-- The user is a minimalist who values performance, low latency and over feature richness.
-- The user prefers clean software architecture and technical correctness and will adapt workflow or feature expectations to fit the software stack rather than accept complex code or workarounds.
-- The user may not be aware of all capabilities offered by the libraries and frameworks in use.
+- **`app.advhub.net`** (Bearer token): `POST /api/dmd_connector.php` with email/password → `user_token`. Use for GPX list/toggle, locations list/create/update/delete.
+- **`hub.dmdnavigation.com`** (session cookie): No programmatic login — Cloudflare Turnstile CAPTCHA blocks it. User must supply `dmdub_session` cookie. Use for GPX upload.
 
-# Library and Framework Usage
-- Always use the latest version available.
-- Before implementing a feature from scratch, check whether the libraries and frameworks already in use provide built-in support for it — possibly in a different form than the user requested. If so, explain the available capabilities and let the user decide how to adjust the request.
-  - Example: The user asks for a specific animation that would require a custom implementation, but the UI framework already provides a set of built-in animations. Present those options and let the user choose.
+## API Reference
+
+See `api_specification.md` for the full API spec covering:
+- GPX Manager (`/api/gpx-manager.php`) — list, toggle, create folder, move, delete
+- GPX upload (`/account/profile/gpx/`) — multipart form, hub session only
+- Community collection (`/api/gpx-collection/`)
+- Download/export (`/api/gpx-download/`, `/api/gpx-export.php`)
+- Locations (`/account/profile/locations/`) — form-based, requires CSRF token
+- Android app API proxy (`app.advhub.net`) — preferred programmatic path, JSON, Bearer token

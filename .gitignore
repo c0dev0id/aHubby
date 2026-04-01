@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# Android
+*.apk
+*.aab
+*.ap_
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Secrets
+.gh_token
+
+# Claude Code local memory
+memory/
