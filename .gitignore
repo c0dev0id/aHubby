@@ -16,6 +16,8 @@ local.properties
 
 # Secrets
 .gh_token
+config.toml
 
 # Claude Code local memory
 memory/
+
