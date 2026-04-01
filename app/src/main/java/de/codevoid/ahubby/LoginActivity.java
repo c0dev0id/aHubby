@@ -60,6 +60,7 @@ public class LoginActivity extends AppCompatActivity {
                 store.save(result.userToken, result.userId);
                 store.saveProfile(result.email, result.displayName, result.deviceName,
                         result.mapLicense, result.communityPoints);
+                store.saveActiveGroupId(result.activeGroupId);
                 runOnUiThread(this::onLoginSuccess);
             } catch (Exception e) {
                 runOnUiThread(() -> {

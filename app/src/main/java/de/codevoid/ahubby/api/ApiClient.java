@@ -28,9 +28,11 @@ public class ApiClient {
         public final String deviceName;
         public final boolean mapLicense;
         public final int communityPoints;
+        public final String activeGroupId;
 
         LoginResult(String userToken, String userId, String email, String displayName,
-                    String deviceName, boolean mapLicense, int communityPoints) {
+                    String deviceName, boolean mapLicense, int communityPoints,
+                    String activeGroupId) {
             this.userToken = userToken;
             this.userId = userId;
             this.email = email;
@@ -38,6 +40,7 @@ public class ApiClient {
             this.deviceName = deviceName;
             this.mapLicense = mapLicense;
             this.communityPoints = communityPoints;
+            this.activeGroupId = activeGroupId;
         }
     }
 
@@ -101,7 +104,8 @@ public class ApiClient {
                     json.optString("displayname", ""),
                     json.optString("active_device_name", ""),
                     "true".equals(json.optString("map_license", "false")),
-                    json.optInt("community_points", 0)
+                    json.optInt("community_points", 0),
+                    json.optString("active_group_id", "")
             );
         } finally {
             conn.disconnect();
@@ -114,6 +118,38 @@ public class ApiClient {
 
     public String fetchLocationsList() throws IOException, JSONException {
         return get(BASE_URL + "/api/locations_proxy.php?action=list");
+    }
+
+    /**
+     * Sends a live location update to the hub. Rate-limited to ~1 Hz by the server;
+     * exceeding the limit is silently ignored — the next scheduled call will succeed.
+     *
+     * @param speedKmh speed in km/h (convert from Android m/s with * 3.6)
+     * @param headingDeg bearing in degrees 0–360
+     * @param altitudeM altitude in metres
+     * @param accuracyM horizontal accuracy in metres
+     */
+    public void updateLocation(String token, String userId,
+                               double lat, double lon,
+                               float speedKmh, float headingDeg,
+                               double altitudeM, float accuracyM)
+            throws IOException, JSONException {
+        JSONObject data = new JSONObject()
+                .put("_id", userId)
+                .put("lat", lat)
+                .put("lon", lon)
+                .put("speed", speedKmh)
+                .put("heading", (int) headingDeg)
+                .put("altitude", altitudeM)
+                .put("accuracy", accuracyM);
+        String resp = postReturningBody(BASE_URL + "/api/location_update.php", token,
+                new JSONObject().put("data", data));
+        JSONObject json = new JSONObject(resp);
+        if (json.has("error")) {
+            String err = json.optString("error", "");
+            if (err.contains("Rate limit")) return; // silently skip; next tick will succeed
+            throw new IOException(err);
+        }
     }
 
     public void toggleGpxVisibility(String id, boolean show) throws IOException, JSONException {
@@ -243,6 +279,33 @@ public class ApiClient {
             String body = is != null ? readStream(is) : "";
             log.log("<< GET " + path + "  " + status + "\n   " + body);
             return body;
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    private String postReturningBody(String url, String token, JSONObject json) throws IOException {
+        byte[] body = json.toString().getBytes(StandardCharsets.UTF_8);
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        try {
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(15_000);
+            conn.setReadTimeout(15_000);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body);
+            }
+
+            int status = conn.getResponseCode();
+            InputStream is = status < 400 ? conn.getInputStream() : conn.getErrorStream();
+            String respBody = readStream(is);
+            if (status != 200) {
+                throw new IOException("HTTP " + status + ": " + respBody);
+            }
+            return respBody;
         } finally {
             conn.disconnect();
         }

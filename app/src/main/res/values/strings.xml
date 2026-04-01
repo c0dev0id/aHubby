@@ -27,6 +27,15 @@
 
     <!-- Live -->
     <string name="live_coming_soon">Live location sharing\ncoming soon</string>
+    <string name="live_position">Position</string>
+    <string name="live_group">Active Group</string>
+    <string name="live_sharing">Share Location</string>
+    <string name="live_status_idle">Not sharing</string>
+    <string name="live_status_sending">Sharing — last update: %1$s</string>
+    <string name="live_status_error">Error: %1$s</string>
+    <string name="live_no_group">No active group</string>
+    <string name="live_no_fix">Waiting for GPS fix…</string>
+    <string name="live_permission_denied">Location permission required</string>
 
     <!-- Profile -->
     <string name="label_email">Email</string>

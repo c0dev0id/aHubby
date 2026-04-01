@@ -14,6 +14,7 @@ public class AuthStore {
     private static final String KEY_DEVICE_NAME = "device_name";
     private static final String KEY_MAP_LICENSE = "map_license";
     private static final String KEY_COMMUNITY_POINTS = "community_points";
+    private static final String KEY_ACTIVE_GROUP_ID = "active_group_id";
 
     private final Context context;
     private final SharedPreferences prefs;
@@ -82,6 +83,14 @@ public class AuthStore {
 
     public int getCommunityPoints() {
         return prefs.getInt(KEY_COMMUNITY_POINTS, 0);
+    }
+
+    public void saveActiveGroupId(String activeGroupId) {
+        prefs.edit().putString(KEY_ACTIVE_GROUP_ID, activeGroupId).apply();
+    }
+
+    public String getActiveGroupId() {
+        return prefs.getString(KEY_ACTIVE_GROUP_ID, "");
     }
 
     public boolean isLoggedIn() {
