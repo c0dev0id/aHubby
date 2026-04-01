@@ -4,10 +4,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class ApiClient {
 
@@ -23,37 +25,57 @@ public class ApiClient {
 
     private static final String BASE_URL = "https://app.advhub.net";
 
-    private final HttpClient http = HttpClient.newHttpClient();
-
-    public LoginResult login(String email, String password)
-            throws IOException, InterruptedException, JSONException {
-        String body = new JSONObject()
+    public LoginResult login(String email, String password) throws IOException, JSONException {
+        byte[] body = new JSONObject()
                 .put("email", email)
                 .put("password", password)
-                .toString();
+                .toString()
+                .getBytes(StandardCharsets.UTF_8);
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/api/dmd_connector.php"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build();
+        HttpURLConnection conn = (HttpURLConnection) new URL(BASE_URL + "/api/dmd_connector.php").openConnection();
+        try {
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(15_000);
+            conn.setReadTimeout(15_000);
 
-        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(body);
+            }
 
-        if (response.statusCode() == 401) {
-            throw new IOException("Invalid credentials");
+            int status = conn.getResponseCode();
+            if (status == 401) {
+                throw new IOException("Invalid credentials");
+            }
+
+            InputStream is = status < 400 ? conn.getInputStream() : conn.getErrorStream();
+            String responseBody = readStream(is);
+
+            if (status != 200) {
+                throw new IOException("HTTP " + status);
+            }
+
+            JSONObject json = new JSONObject(responseBody);
+            String token = json.optString("user_token", null);
+            if (token == null || token.isEmpty()) {
+                String msg = json.optString("message", json.optString("error", "Login failed"));
+                throw new IOException(msg);
+            }
+
+            return new LoginResult(token, json.optString("_id", ""));
+        } finally {
+            conn.disconnect();
         }
-        if (response.statusCode() != 200) {
-            throw new IOException("HTTP " + response.statusCode());
-        }
+    }
 
-        JSONObject json = new JSONObject(response.body());
-        String token = json.optString("user_token", null);
-        if (token == null || token.isEmpty()) {
-            String msg = json.optString("message", json.optString("error", "Login failed"));
-            throw new IOException(msg);
+    private static String readStream(InputStream is) throws IOException {
+        char[] buf = new char[4096];
+        StringBuilder sb = new StringBuilder();
+        try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+            int n;
+            while ((n = reader.read(buf)) != -1) sb.append(buf, 0, n);
         }
-
-        return new LoginResult(token, json.optString("_id", ""));
+        return sb.toString();
     }
 }
