@@ -133,14 +133,14 @@ public class ApiClient {
             throws IOException, JSONException {
         JSONArray cats = new JSONArray();
         for (String c : categories) cats.put(c);
-        JSONObject body = new JSONObject()
+        JSONObject data = new JSONObject()
                 .put("title", title)
                 .put("coordinates", coordinates)
                 .put("continent", continent)
                 .put("country", country)
                 .put("category", cats)
                 .put("main_category", mainCategory);
-        return post(BASE_URL + "/api/locations_proxy.php?action=create", body);
+        return post(BASE_URL + "/api/locations_proxy.php?action=create", new JSONObject().put("data", data));
     }
 
     /**

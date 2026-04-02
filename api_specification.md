@@ -260,8 +260,15 @@ Content-Type: application/json
 
 The `action` must be a **query string parameter**, not in the JSON body.
 
-Required body fields: `title`, `coordinates` (`"lat, lon"`), `continent`, `country`,
-`category` (array), `main_category`.
+Fields must be wrapped in a `"data"` key (same pattern as update):
+
+```json
+{"data": {"title": "...", "coordinates": "49.46, 8.63", "continent": "Europe",
+          "country": "Germany", "category": ["Restaurant"], "main_category": "Restaurant"}}
+```
+
+Sending fields at the top level (without `"data"`) results in a 200 response with the record
+created but all user fields silently discarded — confirmed from live testing.
 
 Response: `{"_id": "<new_id>", "owner": "<user_id>", "_created": <ts>, "_modified": <ts>}`
 
