@@ -1,7 +1,10 @@
 package de.codevoid.ahubby.api;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.List;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -125,6 +128,21 @@ public class ApiClient {
         post(BASE_URL + "/api/locations_proxy.php?action=update", body);
     }
 
+    public String createLocation(String title, String coordinates, String continent,
+            String country, List<String> categories, String mainCategory)
+            throws IOException, JSONException {
+        JSONArray cats = new JSONArray();
+        for (String c : categories) cats.put(c);
+        JSONObject body = new JSONObject()
+                .put("title", title)
+                .put("coordinates", coordinates)
+                .put("continent", continent)
+                .put("country", country)
+                .put("category", cats)
+                .put("main_category", mainCategory);
+        return post(BASE_URL + "/api/locations_proxy.php?action=create", body);
+    }
+
     /**
      * Re-authenticates using stored credentials. Synchronized to prevent concurrent
      * re-auth attempts: if the token was already refreshed by another thread while
@@ -171,20 +189,21 @@ public class ApiClient {
         return body;
     }
 
-    private void post(String url, JSONObject json) throws IOException, JSONException {
+    private String post(String url, JSONObject json) throws IOException, JSONException {
         String token = store.getToken();
         int[] statusHolder = new int[1];
-        String err = doPost(url, token, json, statusHolder);
+        String body = doPost(url, token, json, statusHolder);
         if (statusHolder[0] == 401) {
             token = refreshToken(token);
-            err = doPost(url, token, json, statusHolder);
+            body = doPost(url, token, json, statusHolder);
             if (statusHolder[0] == 401) {
                 throw new AuthException("Session expired — please log in again");
             }
         }
         if (statusHolder[0] != 200) {
-            throw new IOException("HTTP " + statusHolder[0] + ": " + err);
+            throw new IOException("HTTP " + statusHolder[0] + ": " + body);
         }
+        return body;
     }
 
     private String doGet(String url, String token, int[] statusHolder) throws IOException {
@@ -229,10 +248,10 @@ public class ApiClient {
 
             int status = conn.getResponseCode();
             statusHolder[0] = status;
-            InputStream es = conn.getErrorStream();
-            String err = es != null ? readStream(es) : "";
-            log.log("<< POST " + path + "  " + status + (err.isEmpty() ? "" : "\n   " + err));
-            return err;
+            InputStream is = status < 400 ? conn.getInputStream() : conn.getErrorStream();
+            String responseBody = is != null ? readStream(is) : "";
+            log.log("<< POST " + path + "  " + status + (responseBody.isEmpty() ? "" : "\n   " + responseBody));
+            return responseBody;
         } finally {
             conn.disconnect();
         }

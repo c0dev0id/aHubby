@@ -29,6 +29,12 @@
             android:exported="false"
             android:label="@string/debug_title" />
 
+        <activity
+            android:name=".CreateLocationActivity"
+            android:exported="false"
+            android:label="@string/location_create_title"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>

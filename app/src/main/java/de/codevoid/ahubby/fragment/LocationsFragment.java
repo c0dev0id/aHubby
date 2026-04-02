@@ -1,5 +1,6 @@
 package de.codevoid.ahubby.fragment;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -8,6 +9,8 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import de.codevoid.ahubby.CreateLocationActivity;
 import de.codevoid.ahubby.LoginActivity;
 import de.codevoid.ahubby.R;
 import de.codevoid.ahubby.adapter.LocationsAdapter;
@@ -32,6 +36,13 @@ public class LocationsFragment extends Fragment {
     private ProgressBar progress;
     private TextView emptyText;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    private final ActivityResultLauncher<Intent> createLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    loadData();
+                }
+            });
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle saved) {
@@ -64,6 +75,9 @@ public class LocationsFragment extends Fragment {
                 }
             });
         });
+
+        view.findViewById(R.id.add_location_button).setOnClickListener(v ->
+                createLauncher.launch(new Intent(requireContext(), CreateLocationActivity.class)));
 
         loadData();
     }

@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Create Location: "Add" button in the Locations header opens a form to create a new location; search field calls Nominatim to find addresses and POIs and auto-populates coordinates, country, and continent; category dropdown with common types; saves via the Bearer token API and refreshes the list on success
 - Debug log screen: accessible via a small bug-icon button at the bottom-left of the navigation rail; logs all API requests and responses with timestamps; toggle to enable/disable (persisted across restarts, off by default); clear and save-to-Downloads buttons; saved files are timestamped (`ahubby_debug_YYYY-MM-DD_HH-mm-ss.txt`)
 - Automatic token re-authentication: when a Bearer token expires, the app silently re-authenticates using stored credentials and retries the failed request; if re-auth itself fails, the session is cleared and the user is redirected to the login screen
 

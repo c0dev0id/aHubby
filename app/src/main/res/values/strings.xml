@@ -42,6 +42,25 @@
     <string name="error_load_failed">Failed to load data</string>
     <string name="error_toggle_failed">Update failed — change reverted</string>
 
+    <!-- Create Location -->
+    <string name="location_add">+ Add</string>
+    <string name="location_create_title">New Location</string>
+    <string name="location_section_search">Search</string>
+    <string name="location_section_details">Details</string>
+    <string name="location_search_hint">Address or place name</string>
+    <string name="location_search_action">Search</string>
+    <string name="location_search_pick">Select a result</string>
+    <string name="location_search_no_results">No results found</string>
+    <string name="location_search_failed">Search failed</string>
+    <string name="location_hint_title">Title</string>
+    <string name="location_hint_coordinates">Coordinates (lat, lon)</string>
+    <string name="location_hint_country">Country</string>
+    <string name="location_hint_continent">Continent</string>
+    <string name="location_hint_category">Category</string>
+    <string name="location_save">Save location</string>
+    <string name="location_save_fields_required">Please fill in all fields</string>
+    <string name="location_save_failed">Save failed: %1$s</string>
+
     <!-- Debug -->
     <string name="debug_title">Debug Log</string>
     <string name="debug_enable">Enable debug log</string>
