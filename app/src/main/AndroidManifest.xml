@@ -24,6 +24,11 @@
             android:name=".LoginActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".debug.DebugActivity"
+            android:exported="false"
+            android:label="@string/debug_title" />
+
     </application>
 
 </manifest>

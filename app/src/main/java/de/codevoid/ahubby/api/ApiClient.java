@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 import de.codevoid.ahubby.auth.AuthException;
 import de.codevoid.ahubby.auth.AuthStore;
+import de.codevoid.ahubby.debug.DebugLog;
 
 public class ApiClient {
 
@@ -40,12 +41,17 @@ public class ApiClient {
     private static final String BASE_URL = "https://app.advhub.net";
 
     private final AuthStore store;
+    private final DebugLog log;
 
     public ApiClient(AuthStore store) {
         this.store = store;
+        this.log = DebugLog.getInstance(store.getContext());
     }
 
     public LoginResult login(String email, String password) throws IOException, JSONException {
+        JSONObject reqJson = new JSONObject().put("email", email).put("password", "[redacted]");
+        log.log(">> POST /api/dmd_connector.php\n   " + reqJson);
+
         byte[] body = new JSONObject()
                 .put("email", email)
                 .put("password", password)
@@ -66,11 +72,13 @@ public class ApiClient {
 
             int status = conn.getResponseCode();
             if (status == 401) {
+                log.log("<< POST /api/dmd_connector.php  401 Invalid credentials");
                 throw new IOException("Invalid credentials");
             }
 
             InputStream is = status < 400 ? conn.getInputStream() : conn.getErrorStream();
             String responseBody = readStream(is);
+            log.log("<< POST /api/dmd_connector.php  " + status + "\n   " + responseBody);
 
             if (status != 200) {
                 throw new IOException("HTTP " + status);
@@ -180,6 +188,9 @@ public class ApiClient {
     }
 
     private String doGet(String url, String token, int[] statusHolder) throws IOException {
+        String path = url.contains("?") ? url.substring(BASE_URL.length()) : url.substring(BASE_URL.length());
+        log.log(">> GET " + path + "\n   Authorization: Bearer [redacted]");
+
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         try {
             conn.setRequestMethod("GET");
@@ -190,13 +201,18 @@ public class ApiClient {
             int status = conn.getResponseCode();
             statusHolder[0] = status;
             InputStream is = status < 400 ? conn.getInputStream() : conn.getErrorStream();
-            return is != null ? readStream(is) : "";
+            String body = is != null ? readStream(is) : "";
+            log.log("<< GET " + path + "  " + status + "\n   " + body);
+            return body;
         } finally {
             conn.disconnect();
         }
     }
 
     private String doPost(String url, String token, JSONObject json, int[] statusHolder) throws IOException {
+        String path = url.substring(BASE_URL.length());
+        log.log(">> POST " + path + "\n   Authorization: Bearer [redacted]\n   " + json);
+
         byte[] body = json.toString().getBytes(StandardCharsets.UTF_8);
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         try {
@@ -214,7 +230,9 @@ public class ApiClient {
             int status = conn.getResponseCode();
             statusHolder[0] = status;
             InputStream es = conn.getErrorStream();
-            return es != null ? readStream(es) : "";
+            String err = es != null ? readStream(es) : "";
+            log.log("<< POST " + path + "  " + status + (err.isEmpty() ? "" : "\n   " + err));
+            return err;
         } finally {
             conn.disconnect();
         }

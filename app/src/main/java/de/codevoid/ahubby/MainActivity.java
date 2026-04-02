@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.navigationrail.NavigationRailView;
 
 import de.codevoid.ahubby.auth.AuthStore;
+import de.codevoid.ahubby.debug.DebugActivity;
 import de.codevoid.ahubby.fragment.GpxFragment;
 import de.codevoid.ahubby.fragment.LiveFragment;
 import de.codevoid.ahubby.fragment.LocationsFragment;
@@ -34,6 +35,9 @@ public class MainActivity extends AppCompatActivity {
             showFragment(new GpxFragment());
             navRail.setSelectedItemId(R.id.nav_gpx);
         }
+
+        findViewById(R.id.debug_button).setOnClickListener(
+                v -> startActivity(new Intent(this, DebugActivity.class)));
 
         navRail.setOnItemSelectedListener(item -> {
             int id = item.getItemId();

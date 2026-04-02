@@ -15,10 +15,16 @@ public class AuthStore {
     private static final String KEY_MAP_LICENSE = "map_license";
     private static final String KEY_COMMUNITY_POINTS = "community_points";
 
+    private final Context context;
     private final SharedPreferences prefs;
 
     public AuthStore(Context context) {
-        prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        this.context = context.getApplicationContext();
+        prefs = this.context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    public Context getContext() {
+        return context;
     }
 
     public void save(String userToken, String userId) {

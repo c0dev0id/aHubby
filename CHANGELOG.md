@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Debug log screen: accessible via a small bug-icon button at the bottom-left of the navigation rail; logs all API requests and responses with timestamps; toggle to enable/disable (persisted across restarts, off by default); clear and save-to-Downloads buttons; saved files are timestamped (`ahubby_debug_YYYY-MM-DD_HH-mm-ss.txt`)
 - Automatic token re-authentication: when a Bearer token expires, the app silently re-authenticates using stored credentials and retries the failed request; if re-auth itself fails, the session is cleared and the user is redirected to the login screen
 
 ### Changed
