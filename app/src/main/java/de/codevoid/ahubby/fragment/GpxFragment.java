@@ -1,5 +1,6 @@
 package de.codevoid.ahubby.fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,9 +21,11 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import de.codevoid.ahubby.LoginActivity;
 import de.codevoid.ahubby.R;
 import de.codevoid.ahubby.adapter.GpxAdapter;
 import de.codevoid.ahubby.api.ApiClient;
+import de.codevoid.ahubby.auth.AuthException;
 import de.codevoid.ahubby.auth.AuthStore;
 import de.codevoid.ahubby.model.GpxFile;
 
@@ -51,10 +54,12 @@ public class GpxFragment extends Fragment {
         recycler.setAdapter(adapter);
 
         adapter.setToggleListener((file, newValue) -> {
-            String token = new AuthStore(requireContext()).getToken();
+            ApiClient api = new ApiClient(new AuthStore(requireContext()));
             executor.execute(() -> {
                 try {
-                    new ApiClient().toggleGpxVisibility(token, file.id, newValue);
+                    api.toggleGpxVisibility(file.id, newValue);
+                } catch (AuthException e) {
+                    requireActivity().runOnUiThread(this::redirectToLogin);
                 } catch (Exception e) {
                     requireActivity().runOnUiThread(() -> {
                         file.showOnMap = !newValue;
@@ -74,16 +79,18 @@ public class GpxFragment extends Fragment {
         progress.setVisibility(View.VISIBLE);
         emptyText.setVisibility(View.GONE);
 
-        String token = new AuthStore(requireContext()).getToken();
+        ApiClient api = new ApiClient(new AuthStore(requireContext()));
         executor.execute(() -> {
             try {
-                String json = new ApiClient().fetchGpxList(token);
+                String json = api.fetchGpxList();
                 List<GpxFile> files = GpxFile.parseList(json);
                 requireActivity().runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
                     adapter.setItems(files);
                     emptyText.setVisibility(files.isEmpty() ? View.VISIBLE : View.GONE);
                 });
+            } catch (AuthException e) {
+                requireActivity().runOnUiThread(this::redirectToLogin);
             } catch (Exception e) {
                 requireActivity().runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
@@ -91,6 +98,13 @@ public class GpxFragment extends Fragment {
                 });
             }
         });
+    }
+
+    private void redirectToLogin() {
+        new AuthStore(requireContext()).clear();
+        Intent intent = new Intent(requireActivity(), LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
     }
 
     private void showCountryFilter() {

@@ -11,6 +11,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
+import de.codevoid.ahubby.auth.AuthException;
+import de.codevoid.ahubby.auth.AuthStore;
+
 public class ApiClient {
 
     public static class LoginResult {
@@ -35,6 +38,12 @@ public class ApiClient {
     }
 
     private static final String BASE_URL = "https://app.advhub.net";
+
+    private final AuthStore store;
+
+    public ApiClient(AuthStore store) {
+        this.store = store;
+    }
 
     public LoginResult login(String email, String password) throws IOException, JSONException {
         byte[] body = new JSONObject()
@@ -88,27 +97,89 @@ public class ApiClient {
         }
     }
 
-    public String fetchGpxList(String token) throws IOException {
-        return get(BASE_URL + "/api/gpx_proxy.php?action=list", token);
+    public String fetchGpxList() throws IOException, JSONException {
+        return get(BASE_URL + "/api/gpx_proxy.php?action=list");
     }
 
-    public String fetchLocationsList(String token) throws IOException {
-        return get(BASE_URL + "/api/locations_proxy.php?action=list", token);
+    public String fetchLocationsList() throws IOException, JSONException {
+        return get(BASE_URL + "/api/locations_proxy.php?action=list");
     }
 
-    public void toggleGpxVisibility(String token, String id, boolean show) throws IOException, JSONException {
+    public void toggleGpxVisibility(String id, boolean show) throws IOException, JSONException {
         JSONObject data = new JSONObject().put("_id", id).put("show_on_map", show);
         JSONObject body = new JSONObject().put("data", data);
-        post(BASE_URL + "/api/gpx_proxy.php?action=update_visibility", token, body);
+        post(BASE_URL + "/api/gpx_proxy.php?action=update_visibility", body);
     }
 
-    public void toggleLocationVisibility(String token, String id, boolean show) throws IOException, JSONException {
+    public void toggleLocationVisibility(String id, boolean show) throws IOException, JSONException {
         JSONObject data = new JSONObject().put("_id", id).put("show_on_map", show);
         JSONObject body = new JSONObject().put("data", data);
-        post(BASE_URL + "/api/locations_proxy.php?action=update", token, body);
+        post(BASE_URL + "/api/locations_proxy.php?action=update", body);
     }
 
-    private String get(String url, String token) throws IOException {
+    /**
+     * Re-authenticates using stored credentials. Synchronized to prevent concurrent
+     * re-auth attempts: if the token was already refreshed by another thread while
+     * this one waited for the lock, the new token is returned without a second login call.
+     *
+     * @param staleToken the expired token that triggered this refresh
+     * @return the new valid token
+     */
+    private synchronized String refreshToken(String staleToken) throws IOException, JSONException {
+        String current = store.getToken();
+        if (current != null && !current.equals(staleToken)) {
+            return current; // another thread already refreshed
+        }
+        String email = store.getEmail();
+        String password = store.getPassword();
+        if (email == null || email.isEmpty() || password == null || password.isEmpty()) {
+            throw new AuthException("No stored credentials — please log in again");
+        }
+        try {
+            LoginResult result = login(email, password);
+            store.save(result.userToken, result.userId);
+            store.saveProfile(result.email, result.displayName, result.deviceName,
+                    result.mapLicense, result.communityPoints);
+            return result.userToken;
+        } catch (IOException e) {
+            throw new AuthException("Re-authentication failed: " + e.getMessage());
+        }
+    }
+
+    private String get(String url) throws IOException, JSONException {
+        String token = store.getToken();
+        int[] statusHolder = new int[1];
+        String body = doGet(url, token, statusHolder);
+        if (statusHolder[0] == 401) {
+            token = refreshToken(token);
+            body = doGet(url, token, statusHolder);
+            if (statusHolder[0] == 401) {
+                throw new AuthException("Session expired — please log in again");
+            }
+        }
+        if (statusHolder[0] != 200) {
+            throw new IOException("HTTP " + statusHolder[0] + ": " + body);
+        }
+        return body;
+    }
+
+    private void post(String url, JSONObject json) throws IOException, JSONException {
+        String token = store.getToken();
+        int[] statusHolder = new int[1];
+        String err = doPost(url, token, json, statusHolder);
+        if (statusHolder[0] == 401) {
+            token = refreshToken(token);
+            err = doPost(url, token, json, statusHolder);
+            if (statusHolder[0] == 401) {
+                throw new AuthException("Session expired — please log in again");
+            }
+        }
+        if (statusHolder[0] != 200) {
+            throw new IOException("HTTP " + statusHolder[0] + ": " + err);
+        }
+    }
+
+    private String doGet(String url, String token, int[] statusHolder) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         try {
             conn.setRequestMethod("GET");
@@ -117,19 +188,15 @@ public class ApiClient {
             conn.setReadTimeout(15_000);
 
             int status = conn.getResponseCode();
+            statusHolder[0] = status;
             InputStream is = status < 400 ? conn.getInputStream() : conn.getErrorStream();
-            String body = readStream(is);
-
-            if (status != 200) {
-                throw new IOException("HTTP " + status + ": " + body);
-            }
-            return body;
+            return is != null ? readStream(is) : "";
         } finally {
             conn.disconnect();
         }
     }
 
-    private void post(String url, String token, JSONObject json) throws IOException {
+    private String doPost(String url, String token, JSONObject json, int[] statusHolder) throws IOException {
         byte[] body = json.toString().getBytes(StandardCharsets.UTF_8);
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         try {
@@ -145,11 +212,9 @@ public class ApiClient {
             }
 
             int status = conn.getResponseCode();
-            if (status != 200) {
-                InputStream es = conn.getErrorStream();
-                String err = es != null ? readStream(es) : "";
-                throw new IOException("HTTP " + status + ": " + err);
-            }
+            statusHolder[0] = status;
+            InputStream es = conn.getErrorStream();
+            return es != null ? readStream(es) : "";
         } finally {
             conn.disconnect();
         }

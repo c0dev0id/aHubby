@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Automatic token re-authentication: when a Bearer token expires, the app silently re-authenticates using stored credentials and retries the failed request; if re-auth itself fails, the session is cleared and the user is redirected to the login screen
+
+### Changed
+- Login credentials (email + password) are now persisted alongside the token to enable automatic re-authentication
+
+## [Previously Unreleased]
+
+### Added
 - App scaffold: single-module Gradle project, CI/CD build pipeline (lint, build, sign, nightly pre-release)
 - Authentication: login screen with email/password, Bearer token stored in SharedPreferences
 - Session persistence: app redirects to login screen if no valid token is present; logout clears stored credentials

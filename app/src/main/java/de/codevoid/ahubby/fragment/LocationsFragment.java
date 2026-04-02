@@ -1,5 +1,6 @@
 package de.codevoid.ahubby.fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,9 +18,11 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import de.codevoid.ahubby.LoginActivity;
 import de.codevoid.ahubby.R;
 import de.codevoid.ahubby.adapter.LocationsAdapter;
 import de.codevoid.ahubby.api.ApiClient;
+import de.codevoid.ahubby.auth.AuthException;
 import de.codevoid.ahubby.auth.AuthStore;
 import de.codevoid.ahubby.model.HubLocation;
 
@@ -46,10 +49,12 @@ public class LocationsFragment extends Fragment {
         recycler.setAdapter(adapter);
 
         adapter.setToggleListener((loc, newValue) -> {
-            String token = new AuthStore(requireContext()).getToken();
+            ApiClient api = new ApiClient(new AuthStore(requireContext()));
             executor.execute(() -> {
                 try {
-                    new ApiClient().toggleLocationVisibility(token, loc.id, newValue);
+                    api.toggleLocationVisibility(loc.id, newValue);
+                } catch (AuthException e) {
+                    requireActivity().runOnUiThread(this::redirectToLogin);
                 } catch (Exception e) {
                     requireActivity().runOnUiThread(() -> {
                         loc.showOnMap = !newValue;
@@ -67,16 +72,18 @@ public class LocationsFragment extends Fragment {
         progress.setVisibility(View.VISIBLE);
         emptyText.setVisibility(View.GONE);
 
-        String token = new AuthStore(requireContext()).getToken();
+        ApiClient api = new ApiClient(new AuthStore(requireContext()));
         executor.execute(() -> {
             try {
-                String json = new ApiClient().fetchLocationsList(token);
+                String json = api.fetchLocationsList();
                 List<HubLocation> locs = HubLocation.parseList(json);
                 requireActivity().runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
                     adapter.setItems(locs);
                     emptyText.setVisibility(locs.isEmpty() ? View.VISIBLE : View.GONE);
                 });
+            } catch (AuthException e) {
+                requireActivity().runOnUiThread(this::redirectToLogin);
             } catch (Exception e) {
                 requireActivity().runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
@@ -84,6 +91,13 @@ public class LocationsFragment extends Fragment {
                 });
             }
         });
+    }
+
+    private void redirectToLogin() {
+        new AuthStore(requireContext()).clear();
+        Intent intent = new Intent(requireActivity(), LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
     }
 
     @Override

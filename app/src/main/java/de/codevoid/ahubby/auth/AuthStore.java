@@ -9,6 +9,7 @@ public class AuthStore {
     private static final String KEY_TOKEN = "user_token";
     private static final String KEY_USER_ID = "user_id";
     private static final String KEY_EMAIL = "email";
+    private static final String KEY_PASSWORD = "password";
     private static final String KEY_DISPLAY_NAME = "display_name";
     private static final String KEY_DEVICE_NAME = "device_name";
     private static final String KEY_MAP_LICENSE = "map_license";
@@ -25,6 +26,17 @@ public class AuthStore {
                 .putString(KEY_TOKEN, userToken)
                 .putString(KEY_USER_ID, userId)
                 .apply();
+    }
+
+    public void saveCredentials(String email, String password) {
+        prefs.edit()
+                .putString(KEY_EMAIL, email)
+                .putString(KEY_PASSWORD, password)
+                .apply();
+    }
+
+    public String getPassword() {
+        return prefs.getString(KEY_PASSWORD, null);
     }
 
     public void saveProfile(String email, String displayName, String deviceName,

@@ -25,7 +25,6 @@ public class LoginActivity extends AppCompatActivity {
     private ProgressBar progress;
     private TextView errorText;
 
-    private final ApiClient apiClient = new ApiClient();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @Override
@@ -55,8 +54,9 @@ public class LoginActivity extends AppCompatActivity {
 
         executor.execute(() -> {
             try {
-                ApiClient.LoginResult result = apiClient.login(email, password);
                 AuthStore store = new AuthStore(this);
+                ApiClient.LoginResult result = new ApiClient(store).login(email, password);
+                store.saveCredentials(email, password);
                 store.save(result.userToken, result.userId);
                 store.saveProfile(result.email, result.displayName, result.deviceName,
                         result.mapLicense, result.communityPoints);
