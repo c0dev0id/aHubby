@@ -26,12 +26,12 @@ import de.codevoid.ahubby.model.NominatimResult;
 
 public class CreateLocationActivity extends AppCompatActivity {
 
-    static final String EXTRA_ID        = "loc_id";
-    static final String EXTRA_TITLE     = "loc_title";
-    static final String EXTRA_COORDS    = "loc_coords";
-    static final String EXTRA_COUNTRY   = "loc_country";
-    static final String EXTRA_CONTINENT = "loc_continent";
-    static final String EXTRA_CATEGORY  = "loc_category";
+    public static final String EXTRA_ID        = "loc_id";
+    public static final String EXTRA_TITLE     = "loc_title";
+    public static final String EXTRA_COORDS    = "loc_coords";
+    public static final String EXTRA_COUNTRY   = "loc_country";
+    public static final String EXTRA_CONTINENT = "loc_continent";
+    public static final String EXTRA_CATEGORY  = "loc_category";
 
     static final String[] CATEGORIES = {
         "Campground", "View Point", "Fuel Station", "Restaurant",
