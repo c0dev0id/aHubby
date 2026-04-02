@@ -2,6 +2,7 @@ package de.codevoid.ahubby;
 
 import android.os.Bundle;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
@@ -25,10 +26,19 @@ import de.codevoid.ahubby.model.NominatimResult;
 
 public class CreateLocationActivity extends AppCompatActivity {
 
+    static final String EXTRA_ID        = "loc_id";
+    static final String EXTRA_TITLE     = "loc_title";
+    static final String EXTRA_COORDS    = "loc_coords";
+    static final String EXTRA_COUNTRY   = "loc_country";
+    static final String EXTRA_CONTINENT = "loc_continent";
+    static final String EXTRA_CATEGORY  = "loc_category";
+
     static final String[] CATEGORIES = {
         "Campground", "View Point", "Fuel Station", "Restaurant",
         "Hotel", "Parking", "Ferry", "Workshop", "Photo Spot", "Other"
     };
+
+    private String editId; // null = create mode, non-null = edit mode
 
     private TextInputEditText searchInput;
     private TextInputEditText titleInput;
@@ -45,21 +55,39 @@ public class CreateLocationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_location);
 
+        editId = getIntent().getStringExtra(EXTRA_ID);
+        boolean editMode = editId != null;
+
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setTitle(editMode ? R.string.location_edit_title : R.string.location_create_title);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        searchInput = findViewById(R.id.search_input);
-        titleInput = findViewById(R.id.title_input);
-        coordsInput = findViewById(R.id.coords_input);
-        countryInput = findViewById(R.id.country_input);
-        continentInput = findViewById(R.id.continent_input);
+        searchInput     = findViewById(R.id.search_input);
+        titleInput      = findViewById(R.id.title_input);
+        coordsInput     = findViewById(R.id.coords_input);
+        countryInput    = findViewById(R.id.country_input);
+        continentInput  = findViewById(R.id.continent_input);
         categoryDropdown = findViewById(R.id.category_dropdown);
 
         ArrayAdapter<String> catAdapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_dropdown_item_1line, CATEGORIES);
         categoryDropdown.setAdapter(catAdapter);
-        categoryDropdown.setText(CATEGORIES[0], false);
+
+        if (editMode) {
+            titleInput.setText(getIntent().getStringExtra(EXTRA_TITLE));
+            coordsInput.setText(getIntent().getStringExtra(EXTRA_COORDS));
+            countryInput.setText(getIntent().getStringExtra(EXTRA_COUNTRY));
+            continentInput.setText(getIntent().getStringExtra(EXTRA_CONTINENT));
+            String cat = getIntent().getStringExtra(EXTRA_CATEGORY);
+            categoryDropdown.setText(cat != null ? cat : CATEGORIES[0], false);
+
+            View deleteButton = findViewById(R.id.delete_button);
+            deleteButton.setVisibility(View.VISIBLE);
+            deleteButton.setOnClickListener(v -> confirmDelete());
+        } else {
+            categoryDropdown.setText(CATEGORIES[0], false);
+        }
 
         searchInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH ||
@@ -115,9 +143,7 @@ public class CreateLocationActivity extends AppCompatActivity {
             countryInput.setText(result.country);
             continentInput.setText(NominatimClient.continentForCode(result.countryCode));
         }
-        // Populate title only if empty
         if (titleInput.getText() == null || titleInput.getText().toString().isEmpty()) {
-            // Use only the first part of display_name as a suggested title
             String[] parts = result.displayName.split(",", 2);
             titleInput.setText(parts[0].trim());
         }
@@ -125,11 +151,11 @@ public class CreateLocationActivity extends AppCompatActivity {
     }
 
     private void doSave() {
-        String title = text(titleInput);
-        String coords = text(coordsInput);
-        String country = text(countryInput);
+        String title     = text(titleInput);
+        String coords    = text(coordsInput);
+        String country   = text(countryInput);
         String continent = text(continentInput);
-        String category = categoryDropdown.getText().toString().trim();
+        String category  = categoryDropdown.getText().toString().trim();
 
         if (title.isEmpty() || coords.isEmpty() || country.isEmpty()
                 || continent.isEmpty() || category.isEmpty()) {
@@ -139,10 +165,44 @@ public class CreateLocationActivity extends AppCompatActivity {
 
         setUiEnabled(false);
         List<String> categories = Arrays.asList(category);
+        ApiClient api = new ApiClient(new AuthStore(this));
         executor.execute(() -> {
             try {
-                new ApiClient(new AuthStore(this))
-                        .createLocation(title, coords, continent, country, categories, category);
+                if (editId != null) {
+                    api.updateLocation(editId, title, coords, continent, country, categories, category);
+                } else {
+                    api.createLocation(title, coords, continent, country, categories, category);
+                }
+                runOnUiThread(() -> {
+                    setResult(RESULT_OK);
+                    finish();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    setUiEnabled(true);
+                    Toast.makeText(this,
+                            getString(R.string.location_save_failed, e.getMessage()),
+                            Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    private void confirmDelete() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.location_delete_confirm_title)
+                .setMessage(R.string.location_delete_confirm_message)
+                .setPositiveButton(R.string.location_delete, (d, w) -> doDelete())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void doDelete() {
+        setUiEnabled(false);
+        ApiClient api = new ApiClient(new AuthStore(this));
+        executor.execute(() -> {
+            try {
+                api.deleteLocation(editId);
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
                     finish();
@@ -167,6 +227,8 @@ public class CreateLocationActivity extends AppCompatActivity {
         continentInput.setEnabled(enabled);
         categoryDropdown.setEnabled(enabled);
         findViewById(R.id.save_button).setEnabled(enabled);
+        View deleteButton = findViewById(R.id.delete_button);
+        if (deleteButton.getVisibility() == View.VISIBLE) deleteButton.setEnabled(enabled);
     }
 
     private String text(TextInputEditText field) {

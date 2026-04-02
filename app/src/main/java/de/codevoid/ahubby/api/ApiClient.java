@@ -128,6 +128,26 @@ public class ApiClient {
         post(BASE_URL + "/api/locations_proxy.php?action=update", body);
     }
 
+    public void updateLocation(String id, String title, String coordinates, String continent,
+            String country, List<String> categories, String mainCategory)
+            throws IOException, JSONException {
+        JSONArray cats = new JSONArray();
+        for (String c : categories) cats.put(c);
+        JSONObject data = new JSONObject()
+                .put("_id", id)
+                .put("title", title)
+                .put("coordinates", coordinates)
+                .put("continent", continent)
+                .put("country", country)
+                .put("category", cats)
+                .put("main_category", mainCategory);
+        post(BASE_URL + "/api/locations_proxy.php?action=update", new JSONObject().put("data", data));
+    }
+
+    public void deleteLocation(String id) throws IOException, JSONException {
+        get(BASE_URL + "/api/locations_proxy.php?action=delete&id=" + id);
+    }
+
     public String createLocation(String title, String coordinates, String continent,
             String country, List<String> categories, String mainCategory)
             throws IOException, JSONException {

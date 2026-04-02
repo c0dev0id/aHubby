@@ -60,6 +60,10 @@
     <string name="location_save">Save location</string>
     <string name="location_save_fields_required">Please fill in all fields</string>
     <string name="location_save_failed">Save failed: %1$s</string>
+    <string name="location_edit_title">Edit Location</string>
+    <string name="location_delete">Delete location</string>
+    <string name="location_delete_confirm_title">Delete location?</string>
+    <string name="location_delete_confirm_message">This will permanently remove the location from the hub.</string>
 
     <!-- Debug -->
     <string name="debug_title">Debug Log</string>

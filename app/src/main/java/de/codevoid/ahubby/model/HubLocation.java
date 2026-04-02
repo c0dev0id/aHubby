@@ -9,6 +9,7 @@ import java.util.List;
 public class HubLocation {
     public final String id;
     public final String title;
+    public final String continent;
     public final String country;
     public final String mainCategory;
     public final List<String> categories;
@@ -17,11 +18,12 @@ public class HubLocation {
     public final boolean isPublic;
     public final String shortDescription;
 
-    public HubLocation(String id, String title, String country, String mainCategory,
-                       List<String> categories, String coordinates,
+    public HubLocation(String id, String title, String continent, String country,
+                       String mainCategory, List<String> categories, String coordinates,
                        boolean showOnMap, boolean isPublic, String shortDescription) {
         this.id = id;
         this.title = title;
+        this.continent = continent;
         this.country = country;
         this.mainCategory = mainCategory;
         this.categories = categories;
@@ -49,6 +51,7 @@ public class HubLocation {
                 result.add(new HubLocation(
                         o.optString("_id", ""),
                         o.optString("title", ""),
+                        o.optString("continent", ""),
                         o.optString("country", ""),
                         o.optString("main_category", ""),
                         cats,

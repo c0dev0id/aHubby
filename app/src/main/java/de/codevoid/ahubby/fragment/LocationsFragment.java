@@ -39,9 +39,12 @@ public class LocationsFragment extends Fragment {
 
     private final ActivityResultLauncher<Intent> createLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == Activity.RESULT_OK) {
-                    loadData();
-                }
+                if (result.getResultCode() == Activity.RESULT_OK) loadData();
+            });
+
+    private final ActivityResultLauncher<Intent> editLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) loadData();
             });
 
     @Override
@@ -74,6 +77,17 @@ public class LocationsFragment extends Fragment {
                     });
                 }
             });
+        });
+
+        adapter.setEditListener(loc -> {
+            Intent intent = new Intent(requireContext(), CreateLocationActivity.class);
+            intent.putExtra(CreateLocationActivity.EXTRA_ID,        loc.id);
+            intent.putExtra(CreateLocationActivity.EXTRA_TITLE,     loc.title);
+            intent.putExtra(CreateLocationActivity.EXTRA_COORDS,    loc.coordinates);
+            intent.putExtra(CreateLocationActivity.EXTRA_COUNTRY,   loc.country);
+            intent.putExtra(CreateLocationActivity.EXTRA_CONTINENT, loc.continent);
+            intent.putExtra(CreateLocationActivity.EXTRA_CATEGORY,  loc.mainCategory);
+            editLauncher.launch(intent);
         });
 
         view.findViewById(R.id.add_location_button).setOnClickListener(v ->

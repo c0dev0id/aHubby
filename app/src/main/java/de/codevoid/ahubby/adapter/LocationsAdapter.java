@@ -23,8 +23,13 @@ public class LocationsAdapter extends RecyclerView.Adapter<LocationsAdapter.View
         void onToggle(HubLocation loc, boolean newValue);
     }
 
+    public interface EditListener {
+        void onEdit(HubLocation loc);
+    }
+
     private final List<HubLocation> items = new ArrayList<>();
     private ToggleListener listener;
+    private EditListener editListener;
 
     public void setItems(List<HubLocation> list) {
         items.clear();
@@ -34,6 +39,10 @@ public class LocationsAdapter extends RecyclerView.Adapter<LocationsAdapter.View
 
     public void setToggleListener(ToggleListener l) {
         listener = l;
+    }
+
+    public void setEditListener(EditListener l) {
+        editListener = l;
     }
 
     @NonNull
@@ -61,6 +70,10 @@ public class LocationsAdapter extends RecyclerView.Adapter<LocationsAdapter.View
             loc.showOnMap = next;
             updateButton(h.toggleButton, next);
             if (listener != null) listener.onToggle(loc, next);
+        });
+
+        h.itemView.setOnClickListener(v -> {
+            if (editListener != null) editListener.onEdit(loc);
         });
     }
 
