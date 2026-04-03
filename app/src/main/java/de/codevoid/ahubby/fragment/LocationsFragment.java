@@ -83,7 +83,8 @@ public class LocationsFragment extends Fragment {
             Intent intent = new Intent(requireContext(), CreateLocationActivity.class);
             intent.putExtra(CreateLocationActivity.EXTRA_ID,        loc.id);
             intent.putExtra(CreateLocationActivity.EXTRA_TITLE,     loc.title);
-            intent.putExtra(CreateLocationActivity.EXTRA_COORDS,    loc.coordinates);
+            intent.putExtra(CreateLocationActivity.EXTRA_LAT,       loc.latitude);
+            intent.putExtra(CreateLocationActivity.EXTRA_LON,       loc.longitude);
             intent.putExtra(CreateLocationActivity.EXTRA_COUNTRY,   loc.country);
             intent.putExtra(CreateLocationActivity.EXTRA_CONTINENT, loc.continent);
             intent.putExtra(CreateLocationActivity.EXTRA_CATEGORY,  loc.mainCategory);

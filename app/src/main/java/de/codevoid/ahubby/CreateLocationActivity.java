@@ -28,7 +28,8 @@ public class CreateLocationActivity extends AppCompatActivity {
 
     public static final String EXTRA_ID        = "loc_id";
     public static final String EXTRA_TITLE     = "loc_title";
-    public static final String EXTRA_COORDS    = "loc_coords";
+    public static final String EXTRA_LAT       = "loc_lat";
+    public static final String EXTRA_LON       = "loc_lon";
     public static final String EXTRA_COUNTRY   = "loc_country";
     public static final String EXTRA_CONTINENT = "loc_continent";
     public static final String EXTRA_CATEGORY  = "loc_category";
@@ -39,6 +40,8 @@ public class CreateLocationActivity extends AppCompatActivity {
     };
 
     private String editId; // null = create mode, non-null = edit mode
+    private double lat = Double.NaN;
+    private double lon = Double.NaN;
 
     private TextInputEditText searchInput;
     private TextInputEditText titleInput;
@@ -70,13 +73,20 @@ public class CreateLocationActivity extends AppCompatActivity {
         continentInput  = findViewById(R.id.continent_input);
         categoryDropdown = findViewById(R.id.category_dropdown);
 
+        coordsInput.setFocusable(false);
+        coordsInput.setClickable(false);
+
         ArrayAdapter<String> catAdapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_dropdown_item_1line, CATEGORIES);
         categoryDropdown.setAdapter(catAdapter);
 
         if (editMode) {
             titleInput.setText(getIntent().getStringExtra(EXTRA_TITLE));
-            coordsInput.setText(getIntent().getStringExtra(EXTRA_COORDS));
+            lat = getIntent().getDoubleExtra(EXTRA_LAT, Double.NaN);
+            lon = getIntent().getDoubleExtra(EXTRA_LON, Double.NaN);
+            if (!Double.isNaN(lat) && !Double.isNaN(lon)) {
+                coordsInput.setText(formatCoords(lat, lon));
+            }
             countryInput.setText(getIntent().getStringExtra(EXTRA_COUNTRY));
             continentInput.setText(getIntent().getStringExtra(EXTRA_CONTINENT));
             String cat = getIntent().getStringExtra(EXTRA_CATEGORY);
@@ -138,7 +148,12 @@ public class CreateLocationActivity extends AppCompatActivity {
     }
 
     private void onResultSelected(NominatimResult result) {
-        coordsInput.setText(result.coordinates());
+        try {
+            lat = Double.parseDouble(result.lat);
+            lon = Double.parseDouble(result.lon);
+            coordsInput.setText(formatCoords(lat, lon));
+        } catch (NumberFormatException ignored) {
+        }
         if (!result.country.isEmpty()) {
             countryInput.setText(result.country);
             continentInput.setText(NominatimClient.continentForCode(result.countryCode));
@@ -152,13 +167,12 @@ public class CreateLocationActivity extends AppCompatActivity {
 
     private void doSave() {
         String title     = text(titleInput);
-        String coords    = text(coordsInput);
         String country   = text(countryInput);
         String continent = text(continentInput);
         String category  = categoryDropdown.getText().toString().trim();
 
-        if (title.isEmpty() || coords.isEmpty() || country.isEmpty()
-                || continent.isEmpty() || category.isEmpty()) {
+        if (title.isEmpty() || Double.isNaN(lat) || Double.isNaN(lon)
+                || country.isEmpty() || continent.isEmpty() || category.isEmpty()) {
             Toast.makeText(this, R.string.location_save_fields_required, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -169,9 +183,9 @@ public class CreateLocationActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 if (editId != null) {
-                    api.updateLocation(editId, title, coords, continent, country, categories, category);
+                    api.updateLocation(editId, title, lat, lon, continent, country, categories, category);
                 } else {
-                    api.createLocation(title, coords, continent, country, categories, category);
+                    api.createLocation(title, lat, lon, continent, country, categories, category);
                 }
                 runOnUiThread(() -> {
                     setResult(RESULT_OK);
@@ -222,7 +236,6 @@ public class CreateLocationActivity extends AppCompatActivity {
         searchInput.setEnabled(enabled);
         findViewById(R.id.search_button).setEnabled(enabled);
         titleInput.setEnabled(enabled);
-        coordsInput.setEnabled(enabled);
         countryInput.setEnabled(enabled);
         continentInput.setEnabled(enabled);
         categoryDropdown.setEnabled(enabled);
@@ -233,6 +246,10 @@ public class CreateLocationActivity extends AppCompatActivity {
 
     private String text(TextInputEditText field) {
         return field.getText() != null ? field.getText().toString().trim() : "";
+    }
+
+    private static String formatCoords(double lat, double lon) {
+        return String.format("%.6f, %.6f", lat, lon);
     }
 
     @Override

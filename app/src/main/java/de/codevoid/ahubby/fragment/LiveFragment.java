@@ -44,12 +44,10 @@ public class LiveFragment extends Fragment implements LocationListener {
     private LocationManager locationManager;
     private Location lastLocation;
 
-    private final ApiClient apiClient = new ApiClient();
+    private ApiClient apiClient;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> sendTask;
 
-    private String token;
-    private String userId;
     private String activeGroupId;
 
     private final ActivityResultLauncher<String> permissionLauncher =
@@ -75,8 +73,7 @@ public class LiveFragment extends Fragment implements LocationListener {
         shareToggle = view.findViewById(R.id.live_share_toggle);
 
         AuthStore store = new AuthStore(requireContext());
-        token = store.getToken();
-        userId = store.getUserId();
+        apiClient = new ApiClient(store);
         activeGroupId = store.getActiveGroupId();
 
         groupText.setText(activeGroupId.isEmpty()
@@ -132,10 +129,9 @@ public class LiveFragment extends Fragment implements LocationListener {
 
     private void sendLocation() {
         Location loc = lastLocation;
-        if (loc == null || token == null || userId == null) return;
+        if (loc == null) return;
         try {
-            apiClient.updateLocation(
-                    token, userId,
+            apiClient.sendLiveLocation(
                     loc.getLatitude(), loc.getLongitude(),
                     loc.getSpeed() * 3.6f,
                     loc.getBearing(),
