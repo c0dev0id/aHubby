@@ -74,6 +74,12 @@
     <string name="location_delete_confirm_title">Delete location?</string>
     <string name="location_delete_confirm_message">This will permanently remove the location from the hub.</string>
 
+    <!-- GPX upload/download -->
+    <string name="gpx_upload">Upload</string>
+    <string name="gpx_upload_not_available">GPX upload not yet available</string>
+    <string name="gpx_download_ok">Saved to Downloads: %1$s</string>
+    <string name="gpx_download_failed">Download failed: %1$s</string>
+
     <!-- Debug -->
     <string name="debug_title">Debug Log</string>
     <string name="debug_enable">Enable debug log</string>

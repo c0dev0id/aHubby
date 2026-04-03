@@ -1,7 +1,10 @@
 package de.codevoid.ahubby.fragment;
 
+import android.content.ContentValues;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,7 +12,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -17,6 +19,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 
+import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -69,6 +72,40 @@ public class GpxFragment extends Fragment {
                 }
             });
         });
+
+        adapter.setDownloadListener(file -> {
+            ApiClient api = new ApiClient(new AuthStore(requireContext()));
+            executor.execute(() -> {
+                try {
+                    byte[] data = api.downloadGpx(file.id);
+                    String filename = sanitizeFilename(file.title) + ".gpx";
+                    ContentValues cv = new ContentValues();
+                    cv.put(MediaStore.Downloads.DISPLAY_NAME, filename);
+                    cv.put(MediaStore.Downloads.MIME_TYPE, "application/gpx+xml");
+                    cv.put(MediaStore.Downloads.RELATIVE_PATH, "Download/");
+                    Uri uri = requireContext().getContentResolver()
+                            .insert(MediaStore.Downloads.getContentUri("external"), cv);
+                    if (uri == null) throw new Exception("Could not create file in Downloads");
+                    try (OutputStream os = requireContext().getContentResolver().openOutputStream(uri)) {
+                        if (os == null) throw new Exception("Could not open output stream");
+                        os.write(data);
+                    }
+                    requireActivity().runOnUiThread(() ->
+                            Snackbar.make(requireView(),
+                                    getString(R.string.gpx_download_ok, filename),
+                                    Snackbar.LENGTH_LONG).show());
+                } catch (Exception e) {
+                    String msg = e.getMessage() != null ? e.getMessage() : "unknown error";
+                    requireActivity().runOnUiThread(() ->
+                            Snackbar.make(requireView(),
+                                    getString(R.string.gpx_download_failed, msg),
+                                    Snackbar.LENGTH_LONG).show());
+                }
+            });
+        });
+
+        view.findViewById(R.id.upload_button).setOnClickListener(v ->
+                Snackbar.make(requireView(), R.string.gpx_upload_not_available, Snackbar.LENGTH_SHORT).show());
 
         filterButton.setOnClickListener(v -> showCountryFilter());
 
@@ -126,6 +163,10 @@ public class GpxFragment extends Fragment {
                     }
                 })
                 .show();
+    }
+
+    private static String sanitizeFilename(String title) {
+        return title.replaceAll("[^a-zA-Z0-9._\\- ]", "_").trim();
     }
 
     @Override

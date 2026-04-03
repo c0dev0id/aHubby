@@ -66,6 +66,18 @@
             android:minWidth="120dp"
             android:textSize="12sp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/download_button"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="4dp"
+            app:icon="@drawable/ic_download"
+            app:iconSize="20dp"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+
     </LinearLayout>
 
     <View

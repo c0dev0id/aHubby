@@ -22,10 +22,15 @@ public class GpxAdapter extends RecyclerView.Adapter<GpxAdapter.ViewHolder> {
         void onToggle(GpxFile file, boolean newValue);
     }
 
+    public interface DownloadListener {
+        void onDownload(GpxFile file);
+    }
+
     private final List<GpxFile> all = new ArrayList<>();
     private final List<GpxFile> filtered = new ArrayList<>();
     private String countryFilter = null;
-    private ToggleListener listener;
+    private ToggleListener toggleListener;
+    private DownloadListener downloadListener;
 
     public void setItems(List<GpxFile> items) {
         all.clear();
@@ -39,7 +44,11 @@ public class GpxAdapter extends RecyclerView.Adapter<GpxAdapter.ViewHolder> {
     }
 
     public void setToggleListener(ToggleListener l) {
-        listener = l;
+        toggleListener = l;
+    }
+
+    public void setDownloadListener(DownloadListener l) {
+        downloadListener = l;
     }
 
     private void applyFilter() {
@@ -82,7 +91,11 @@ public class GpxAdapter extends RecyclerView.Adapter<GpxAdapter.ViewHolder> {
             boolean next = !f.showOnMap;
             f.showOnMap = next;
             updateButton(h.toggleButton, next, v.getContext());
-            if (listener != null) listener.onToggle(f, next);
+            if (toggleListener != null) toggleListener.onToggle(f, next);
+        });
+
+        h.downloadButton.setOnClickListener(v -> {
+            if (downloadListener != null) downloadListener.onDownload(f);
         });
     }
 
@@ -108,6 +121,7 @@ public class GpxAdapter extends RecyclerView.Adapter<GpxAdapter.ViewHolder> {
         final TextView country;
         final TextView publicBadge;
         final MaterialButton toggleButton;
+        final MaterialButton downloadButton;
 
         ViewHolder(View v) {
             super(v);
@@ -115,6 +129,7 @@ public class GpxAdapter extends RecyclerView.Adapter<GpxAdapter.ViewHolder> {
             country = v.findViewById(R.id.country);
             publicBadge = v.findViewById(R.id.public_badge);
             toggleButton = v.findViewById(R.id.toggle_button);
+            downloadButton = v.findViewById(R.id.download_button);
         }
     }
 }
