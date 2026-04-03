@@ -376,6 +376,8 @@ public class ApiClient {
         try {
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Authorization", "Bearer " + bearer);
+            conn.setRequestProperty("User-Agent", "DMD-HUB-iOS/1.0.6");
+            conn.setRequestProperty("Accept", "application/json");
             conn.setConnectTimeout(15_000);
             conn.setReadTimeout(15_000);
 
@@ -399,6 +401,8 @@ public class ApiClient {
         try {
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Authorization", "Bearer " + bearer);
+            conn.setRequestProperty("User-Agent", "DMD-HUB-iOS/1.0.6");
+            conn.setRequestProperty("Accept", "application/json");
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
             conn.setConnectTimeout(15_000);
