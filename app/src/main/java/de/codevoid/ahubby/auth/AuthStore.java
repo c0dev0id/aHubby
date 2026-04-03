@@ -15,6 +15,7 @@ public class AuthStore {
     private static final String KEY_MAP_LICENSE = "map_license";
     private static final String KEY_COMMUNITY_POINTS = "community_points";
     private static final String KEY_ACTIVE_GROUP_ID = "active_group_id";
+    private static final String KEY_LOGIN_TIMESTAMP = "login_timestamp";
 
     private final Context context;
     private final SharedPreferences prefs;
@@ -33,6 +34,28 @@ public class AuthStore {
                 .putString(KEY_TOKEN, userToken)
                 .putString(KEY_USER_ID, userId)
                 .apply();
+    }
+
+    public void saveLoginTimestamp(long epochSeconds) {
+        prefs.edit().putLong(KEY_LOGIN_TIMESTAMP, epochSeconds).apply();
+    }
+
+    public long getLoginTimestamp() {
+        return prefs.getLong(KEY_LOGIN_TIMESTAMP, 0L);
+    }
+
+    /**
+     * Builds the iOS-style Bearer token: Base64(<_id>:<epoch_seconds>:<user_token>).
+     * This is the auth format expected by all /api/ios/ endpoints.
+     */
+    public String getIosBearerToken() {
+        String userId = getUserId();
+        String token = getToken();
+        if (userId == null || token == null) return null;
+        String raw = userId + ":" + getLoginTimestamp() + ":" + token;
+        return android.util.Base64.encodeToString(
+                raw.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                android.util.Base64.NO_WRAP);
     }
 
     public void saveCredentials(String email, String password) {

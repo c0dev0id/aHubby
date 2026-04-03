@@ -58,6 +58,7 @@ public class LoginActivity extends AppCompatActivity {
                 ApiClient.LoginResult result = new ApiClient(store).login(email, password);
                 store.saveCredentials(email, password);
                 store.save(result.userToken, result.userId);
+                store.saveLoginTimestamp(System.currentTimeMillis() / 1000L);
                 store.saveProfile(result.email, result.displayName, result.deviceName,
                         result.mapLicense, result.communityPoints);
                 store.saveActiveGroupId(result.activeGroupId);
