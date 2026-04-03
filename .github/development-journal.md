@@ -58,10 +58,20 @@ redirects to the login screen. Passwords are not persisted.
 - Active group ID persisted from login response; group listing deferred (WebSocket-only, no REST endpoint)
 - Speed unit conversion: Android `getSpeed()` returns m/s → multiply by 3.6 for km/h expected by API
 
-### Phase 3 (planned)
-- GPX upload via `hub.dmdnavigation.com` (hub session cookie required)
-- Location delete
-- Live location tab: display own position + group members' live positions
+### iOS API refactor (Phase 3 complete)
+- All data endpoints migrated from legacy `*_proxy.php` to `/api/ios/` namespace on `app.advhub.net`
+- iOS Bearer token format discovered via Charles Proxy SSL interception of the official iOS app (TestFlight):
+  `Authorization: Bearer base64(<_id>:<login_epoch_seconds>:<user_token>)`
+- GPX list now uses recursive folder traversal (`/api/ios/my-gpx?action=list[&folder_id=<id>]`)
+- Location model updated: `latitude`/`longitude` separate floats (old proxy used `"lat, lon"` string)
+- Field names corrected: `id` (not `_id`), `is_public` (not `public`) across both GPX and location models
+- GPX download implemented: `GET /api/ios/gpx/<id>/content` saves to MediaStore Downloads
+- GPX upload: stub only — iOS app's upload flow shows errors when SSL proxied (likely cert pinning); endpoint TBD
+- `planner-session` endpoint discovered: `GET /api/ios/planner-session` returns `dmdub_session` cookie bypassing Cloudflare Turnstile CAPTCHA — unblocks future hub session operations from Bearer token context
+
+### Next (planned)
+- GPX upload endpoint discovery and implementation
+- Live tab: display group members' live positions on a map
 
 ## Live Location API (researched via ADB + APK analysis)
 

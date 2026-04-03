@@ -626,3 +626,187 @@ GET https://app.advhub.net/users/view/<user_id>
 ```
 
 Avatar storage: `https://app.advhub.net/storage/users/<user_id>/`
+
+---
+
+## iOS API Namespace (app.advhub.net) — preferred mobile path
+
+Discovered by intercepting the official iOS companion app (TestFlight) via Charles Proxy with SSL
+proxying enabled for `*.advhub.net`.
+
+**All endpoints:** `https://app.advhub.net/api/ios/`
+
+**Auth:** `Authorization: Bearer <ios_bearer_token>`
+
+The iOS Bearer token is different from the raw `user_token`. It is constructed as:
+```
+base64(<_id> + ":" + <epoch_seconds_at_login> + ":" + <user_token>)
+```
+`epoch_seconds_at_login` is the Unix timestamp (seconds) at the moment the `/api/dmd_connector.php`
+login was performed and `user_token` was issued. The token **must** be re-constructed using the
+original login timestamp — it is not refreshed when the session is refreshed.
+
+### iOS-specific Bearer token — planner session bridge
+
+```
+GET /api/ios/planner-session
+Authorization: Bearer <ios_bearer_token>
+```
+
+Returns a `dmdub_session` cookie value that can be used as `Cookie: dmdub_session=<value>` on
+`hub.dmdnavigation.com` endpoints — bypassing the Cloudflare Turnstile CAPTCHA.
+
+Response: `{"session": "<dmdub_session_value>"}`
+
+---
+
+### GPX — iOS namespace
+
+#### List files (hierarchical)
+
+```
+GET /api/ios/my-gpx?action=list[&folder_id=<id>]
+Authorization: Bearer <ios_bearer_token>
+```
+
+Response envelope:
+```json
+{"files": [...], "folders": [...]}
+```
+
+To get all files: start with no `folder_id`, then recurse into each folder that has
+`file_count > 0` or `folder_count > 0`.
+
+**File object fields** (confirmed from live response):
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | ⚠️ `id`, not `_id` |
+| `title` | string | |
+| `country` | string | |
+| `continent` | string | |
+| `show_on_map` | bool | |
+| `is_public` | bool | ⚠️ `is_public`, not `public` |
+| `description` | string | |
+| `distance_km` | float | Route distance |
+| `tracks_count` | int | |
+| `waypoints_count` | int | |
+| `color` | string | Hex color or empty |
+| `allow_download` | bool | |
+
+**Folder object fields:**
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | |
+| `name` | string | |
+| `file_count` | int | |
+| `folder_count` | int | |
+
+#### Toggle map visibility
+
+```
+POST /api/ios/my-gpx
+Authorization: Bearer <ios_bearer_token>
+Content-Type: application/json
+
+{"action": "toggle_show_on_map", "gpx_id": "<id>", "show_on_map": true}
+```
+
+#### Download file content
+
+```
+GET /api/ios/gpx/<id>/content
+Authorization: Bearer <ios_bearer_token>
+```
+
+Returns raw GPX XML bytes (`application/gpx+xml`).
+
+#### Upload
+
+⚠️ **Not yet confirmed.** The iOS app's upload flow triggers an error when SSL proxying is
+active — possible certificate pinning or Cloudflare challenge on that specific endpoint.
+Discovery is pending.
+
+---
+
+### Locations — iOS namespace
+
+All location mutations use a single endpoint with an `action` field in the body. No CSRF required.
+
+```
+POST /api/ios/my-locations
+Authorization: Bearer <ios_bearer_token>
+Content-Type: application/json
+```
+
+#### List
+
+```
+GET /api/ios/my-locations
+Authorization: Bearer <ios_bearer_token>
+```
+
+Response envelope: `{"success": true, "locations": [...]}`
+
+**Location object fields** (confirmed from live response):
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | ⚠️ `id`, not `_id` |
+| `title` | string | |
+| `latitude` | float | ⚠️ Separate float, not `"lat, lon"` string |
+| `longitude` | float | |
+| `continent` | string | |
+| `country` | string | |
+| `category` | array | String array |
+| `main_category` | string | |
+| `show_on_map` | bool | |
+| `is_public` | bool | ⚠️ `is_public`, not `public` |
+| `short_description` | string | |
+| `address` | string | |
+| `thumbnail_url` | string | |
+
+#### Create
+
+```json
+{"action": "create", "title": "...", "latitude": 49.46, "longitude": 8.63,
+ "continent": "Europe", "country": "Germany",
+ "category": ["Campground"], "main_category": "Campground",
+ "public": false, "show_on_map": false}
+```
+
+#### Update
+
+```json
+{"action": "update", "location_id": "<id>", "title": "...",
+ "latitude": 49.46, "longitude": 8.63,
+ "continent": "Europe", "country": "Germany",
+ "category": ["Campground"], "main_category": "Campground"}
+```
+
+#### Toggle map visibility
+
+```json
+{"action": "update", "location_id": "<id>", "show_on_map": true}
+```
+
+#### Delete
+
+```json
+{"action": "delete", "location_id": "<id>"}
+```
+
+---
+
+### Navigate-to — iOS namespace
+
+```
+POST /api/ios/navigate-to
+Authorization: Bearer <ios_bearer_token>
+Content-Type: application/json
+
+{"action": "set", "lat": <float>, "lng": <float>, "name": "<label>"}
+```
+
+Note: field is `lng`, not `lon`.
