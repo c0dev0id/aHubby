@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 
 import de.codevoid.ahubby.api.ApiClient;
 import de.codevoid.ahubby.auth.AuthStore;
+import de.codevoid.ahubby.debug.DebugActivity;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -39,6 +40,8 @@ public class LoginActivity extends AppCompatActivity {
         errorText = findViewById(R.id.error_text);
 
         loginButton.setOnClickListener(v -> attemptLogin());
+        findViewById(R.id.debug_button).setOnClickListener(
+                v -> startActivity(new Intent(this, DebugActivity.class)));
     }
 
     private void attemptLogin() {

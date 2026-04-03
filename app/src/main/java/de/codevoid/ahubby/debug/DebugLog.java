@@ -2,6 +2,7 @@ package de.codevoid.ahubby.debug;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public class DebugLog {
     private DebugLog(Context context) {
         prefs = context.getApplicationContext()
                 .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        enabled = prefs.getBoolean(KEY_ENABLED, false);
+        enabled = prefs.getBoolean(KEY_ENABLED, true);
     }
 
     public static synchronized DebugLog getInstance(Context context) {
@@ -47,8 +48,9 @@ public class DebugLog {
     }
 
     public synchronized void log(String entry) {
-        if (!enabled) return;
         String line = TS_FMT.format(new Date()) + "  " + entry;
+        Log.d("AHUBBY", line);
+        if (!enabled) return;
         entries.add(line);
         if (entries.size() > MAX_ENTRIES) {
             entries.remove(0);
